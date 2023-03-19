@@ -264,26 +264,26 @@ typedef struct
 
 /* Valores estándar para las configuraciones */
 /* 8.4.1 GPIOx_MODER (dos bit por cada PIN)*/
-#define GPIOx_MODE_IN		0
-#define GPIOx_MODE_OUT		1
-#define GPIOx_MODE_ALTFN	2
-#define GPIOx_MODE_ANALOG	3
+#define GPIO_MODE_IN		0
+#define GPIO_MODE_OUT		1
+#define GPIO_MODE_ALTFN	2
+#define GPIO_MODE_ANALOG	3
 
 /* 8.4.2 GPIOx_OTYPER (un bit por PIN) */
-#define GPIOx_OTYPE_PUSHPULL		0
-#define GPIOx_OTYPE_OPENDRAIN		1
+#define GPIO_OTYPE_PUSHPULL		0
+#define GPIO_OTYPE_OPENDRAIN		1
 
 /*8.4.3 GPIOx_OSPEEDR ( dos bit por cada PIN) */
-#define GPAIOx_OSPEEDR_LOW			0
-#define GPAIOx_OSPEEDR_MEDIUM		1
-#define GPAIOx_OSPEEDR_FAST			2
-#define GPAIOx_OSPEEDR_HIGH			3
+#define GPIO_OSPEED_LOW			0
+#define GPIO_OSPEED_MEDIUM		1
+#define GPIO_OSPEED_FAST			2
+#define GPIO_OSPEED_HIGH			3
 
 /*8.4.4 GPIOx_PUPDR ( dos bit por cada PIN) */
-#define GPIOx_PUPDR_NOTHING			0
-#define GPIOx_PUPDR_PULLUP			1
-#define GPIOx_PUPDR_PULLDOWN		2
-#define GPIOx_PUPDR_RESERVED		3
+#define GPIO_PUPDR_NOTHING			0
+#define GPIO_PUPDR_PULLUP			1
+#define GPIO_PUPDR_PULLDOWN		2
+#define GPIO_PUPDR_RESERVED		3
 
 /* 8.4.5 GPIOx_IDR ( un bit por PIN) - este es el registro para leer en el estado de un PIN */
 
