@@ -164,16 +164,17 @@ int main(void)
 		numBin(contador);
 
 		if(buttonStatus == 1){
-			contador -= 1;
-		}else{
 			contador += 1;
+		}
+		if(buttonStatus == 0){
+			contador -= 1;
 		}
 
 		if(contador > 60){
 			contador = 1;
 		}
 
-		if(contador < 1){
+		if(contador < 0){
 			contador = 60;
 		}
 
