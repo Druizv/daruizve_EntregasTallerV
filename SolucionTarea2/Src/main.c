@@ -174,11 +174,11 @@ int main(void)
 			contador = 1;
 		}
 
-		if(contador < 0){
+		if(contador < 1){
 			contador = 60;
 		}
 
-		for (int i=0;(i=1200000);i++){
+		for (int i=0;(i<1200000);i++){
 				NOP();
 		}
 
