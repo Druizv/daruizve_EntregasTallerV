@@ -37,9 +37,11 @@ typedef struct
 	BasicTimer_Config_t	TIMx_Config;
 }BasicTimer_Handler_t;
 
+
 void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler);
-void BasicTimerx_Callback(void);/* Esta función debe ser sobre-escrita en el main para que el sistema funcione*/
-
-
+void BasicTimer2_Callback(void);/* Esta función debe ser sobre-escrita en el main para que el sistema funcione*/
+void BasicTimer3_Callback(void);
+void BasicTimer4_Callback(void);
+void BasicTimer5_Callback(void);
 // del 2 al 5
 #endif /* INC_BASICTIMER_H_ */

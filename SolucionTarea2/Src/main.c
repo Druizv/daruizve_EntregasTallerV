@@ -155,7 +155,6 @@ int main(void)
 	handlerLED_7.GPIO_PinConfig.GPIO_PinSpeed				= GPIO_OSPEED_FAST;
 	handlerLED_7.GPIO_PinConfig.GPIO_PinAltFunMode			= AF0;
 
-
     /* Loop forever */
 	while(1){
 
@@ -186,7 +185,6 @@ int main(void)
 	}
 	return 0;
 }
-
 
 void numBin(uint8_t contador){
 
@@ -246,3 +244,4 @@ void numBin(uint8_t contador){
 			GPIO_WritePin(&handlerLED_7, RESET);
 		}
 	}
+

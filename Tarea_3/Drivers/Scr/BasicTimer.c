@@ -41,17 +41,17 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 		RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 	}
 	else if(ptrBTimerHandler->ptrTIMx == TIM3){
-		// Registro del RCC que nos activa la señal de reloj para el TIM2
+		// Registro del RCC que nos activa la señal de reloj para el TIM3
 		RCC->APB1ENR &= ~RCC_APB1ENR_TIM3EN;
 		RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 	}
 	else if(ptrBTimerHandler->ptrTIMx == TIM4){
-		// Registro del RCC que nos activa la señal de reloj para el TIM2
+		// Registro del RCC que nos activa la señal de reloj para el TIM4
 		RCC->APB1ENR &= ~RCC_APB1ENR_TIM4EN;
 		RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
 	}
 	else if(ptrBTimerHandler->ptrTIMx == TIM5){
-		// Registro del RCC que nos activa la señal de reloj para el TIM2
+		// Registro del RCC que nos activa la señal de reloj para el TIM5
 		RCC->APB1ENR &= ~RCC_APB1ENR_TIM5EN;
 		RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;
 	}
@@ -87,7 +87,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 		/* 3a. Estamos en DOWN_Mode, el limite se carga en ARR (0) y se comienza en un valor alto
 		 * Trabaja contando en direccion descendente*/
 		/* Escriba codigo aca */
-		ptrBTimerHandler->ptrTIMx->CR1 |= ~TIM_CR1_DIR;
+		ptrBTimerHandler->ptrTIMx->CR1 |= TIM_CR1_DIR;
 
 
 		/* 3b. Configuramos el Auto-reload. Este es el "limite" hasta donde el CNT va a contar
@@ -126,6 +126,15 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 		/* Escriba codigo aca */
 		NVIC_EnableIRQ(TIM3_IRQn);
 	}
+	else if(ptrBTimerHandler->ptrTIMx == TIM4){
+		// Activando en NVIC para la interrupción del TIM2
+		NVIC_EnableIRQ(TIM4_IRQn);
+	}
+	else if(ptrBTimerHandler->ptrTIMx == TIM5){
+		// Activando en NVIC para la interrupción del TIM2
+		NVIC_EnableIRQ(TIM5_IRQn);
+	}
+
 	else{
 		__NOP();
 	}
@@ -136,7 +145,26 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	__enable_irq();
 }
 
-__attribute__((weak)) void BasicTimerX_Callback(void){
+__attribute__((weak)) void BasicTimer2_Callback(void){
+	  /* NOTE : This function should not be modified, when the callback is needed,
+	            the BasicTimerX_Callback could be implemented in the main file
+	   */
+	__NOP();
+
+}
+__attribute__((weak)) void BasicTimer3_Callback(void){
+	  /* NOTE : This function should not be modified, when the callback is needed,
+	            the BasicTimerX_Callback could be implemented in the main file
+	   */
+	__NOP();
+}
+__attribute__((weak)) void BasicTimer4_Callback(void){
+	  /* NOTE : This function should not be modified, when the callback is needed,
+	            the BasicTimerX_Callback could be implemented in the main file
+	   */
+	__NOP();
+}
+__attribute__((weak)) void BasicTimer5_Callback(void){
 	  /* NOTE : This function should not be modified, when the callback is needed,
 	            the BasicTimerX_Callback could be implemented in the main file
 	   */
@@ -150,9 +178,38 @@ __attribute__((weak)) void BasicTimerX_Callback(void){
  * el sistema inmediatamente salta a este lugar en la memoria*/
 void TIM2_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	TIM2->SR &= ~TIM_SR_UIF;
 
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
-	//BasicTimer2_Callback();
+	BasicTimer2_Callback();
 
 }
+void TIM3_IRQHandler(void){
+	/* Limpiamos la bandera que indica que la interrupción se ha generado */
+	TIM3->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
+	BasicTimer3_Callback();
+
+}
+void TIM4_IRQHandler(void){
+	/* Limpiamos la bandera que indica que la interrupción se ha generado */
+	TIM4->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
+	BasicTimer4_Callback();
+
+}
+void TIM5_IRQHandler(void){
+	/* Limpiamos la bandera que indica que la interrupción se ha generado */
+	TIM5->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
+	BasicTimer5_Callback();
+
+}
+void BasicTimer_Callback(void){
+	__NOP();
+}
+
+

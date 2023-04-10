@@ -17,8 +17,6 @@
 #define BTIMER_SPEED_100us	1600
 #define BTIMER_SPEED_1ms	16000
 
-#define BTIMER_INTERRUPT_ENABLE 1
-#define BTIMER_INTERRUPT_DISABLE 0
 
 
 /* Estructura que contiene la configuración mínima necesaria para el manejo del Timer.*/
@@ -38,8 +36,8 @@ typedef struct
 }BasicTimer_Handler_t;
 
 void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler);
-void BasicTimerx_Callback(void);/* Esta función debe ser sobre-escrita en el main para que el sistema funcione*/
+void BasicTimerX_Callback(void); /* Esta función debe ser sobre-escrita en el main para que el sistema funcione*/
 
 
-// del 2 al 5
+
 #endif /* INC_BASICTIMER_H_ */

@@ -40,14 +40,15 @@ typedef struct
 /* Definicion de las cabeceras de las funciones del GPIOxDriver*/
 
 void GPIO_Config (GPIO_Handler_t *pGPIOHandler);
-void GPIO_WriterPin(GPIO_Handler_t *pPinHandler, uint8_t newState);
+void GPIO_WritePin(GPIO_Handler_t *pPinHandler, uint8_t newState);
 uint32_t GPIO_ReadPin (GPIO_Handler_t *pPinHandler);
+void GPIOxTooglePin (GPIO_Handler_t *pPinHandler);
 
 /* Valores estándar para las configuraciones */
 /* 8.4.1 GPIOx_MODER (dos bit por cada PIN)*/
 #define GPIO_MODE_IN		0
 #define GPIO_MODE_OUT		1
-#define GPIO_MODE_ALTFN	2
+#define GPIO_MODE_ALTFN	    2
 #define GPIO_MODE_ANALOG	3
 
 /* 8.4.2 GPIOx_OTYPER (un bit por PIN) */
@@ -55,10 +56,10 @@ uint32_t GPIO_ReadPin (GPIO_Handler_t *pPinHandler);
 #define GPIO_OTYPE_OPENDRAIN		1
 
 /*8.4.3 GPIOx_OSPEEDR ( dos bit por cada PIN) */
-#define GPIO_OSPEEDR_LOW			0
-#define GPIO_OSPEEDR_MEDIUM		1
-#define GPIO_OSPEEDR_FAST			2
-#define GPIO_OSPEEDR_HIGH			3
+#define GPIO_OSPEED_LOW			0
+#define GPIO_OSPEED_MEDIUM		1
+#define GPIO_OSPEED_FAST			2
+#define GPIO_OSPEED_HIGH			3
 
 /*8.4.4 GPIOx_PUPDR ( dos bit por cada PIN) */
 #define GPIO_PUPDR_NOTHING			0
@@ -110,5 +111,4 @@ uint32_t GPIO_ReadPin (GPIO_Handler_t *pPinHandler);
 
 
 #endif /* INC_GPIOXDRIVER_H_ */
-
 

@@ -66,6 +66,7 @@ int main(void){
 	// Este es el ciclo principal, donde se ejecuta todo el programa
 	while(1){
 		NOP();
+
 	}
 
 }
