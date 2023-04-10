@@ -40,7 +40,7 @@ uint8_t statusSW = 0;
 uint8_t uniDisplay = 0;
 uint8_t decDisplay = 0;
 
-uint8_t wormpos = 0;
+int8_t wormpos = 0;
 //definicion de las banderas
 uint8_t flagDT      = 0;
 uint8_t flagSW      = 0;
@@ -141,20 +141,20 @@ int main(void){
 		// se cierra el contador
 		else if (statusSW == 1){
 			if(GPIO_ReadPin(&handlerEncoderDT) == 0 && flagCLK){
-				if(wormpos < 11){
+				if(wormpos < 12){
 					wormpos ++;
 				}
 				flagCLK = 0;
-				if(wormpos == 11){
+				if(wormpos > 11){
 					wormpos = 0;
 				}
 			}
 			else if (GPIO_ReadPin(&handlerEncoderDT) == 1 && flagCLK){
-				if(wormpos > 0){
+				if(wormpos > -1){
 					wormpos -- ;
 				}
 				flagCLK = 0;
-				if(wormpos == 0){
+				if(wormpos < 0){
 					wormpos = 11 ;
 
 				}
@@ -242,46 +242,46 @@ void init_system(void){
 
 	//Se configuran los LED del 7 segmentos doble
 	handlerLEDA.pGPIOx								 = GPIOA;
-	handlerLEDA.GPIO_PinConfig.GPIO_PinNumber       = PIN_0;
-	handlerLEDA.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDA.GPIO_PinConfig.GPIO_PinNumber        = PIN_0;
+	handlerLEDA.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDA.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDA.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDA.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDA.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDB.pGPIOx								 = GPIOA;
-	handlerLEDB.GPIO_PinConfig.GPIO_PinNumber       = PIN_1;
-	handlerLEDB.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDB.GPIO_PinConfig.GPIO_PinNumber        = PIN_1;
+	handlerLEDB.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDB.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDB.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDB.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDB.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDC.pGPIOx								 = GPIOC;
-	handlerLEDC.GPIO_PinConfig.GPIO_PinNumber       = PIN_4;
-	handlerLEDC.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDC.GPIO_PinConfig.GPIO_PinNumber        = PIN_4;
+	handlerLEDC.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDC.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDC.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDC.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDC.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDD.pGPIOx								 = GPIOC;
-	handlerLEDD.GPIO_PinConfig.GPIO_PinNumber       = PIN_3;
-	handlerLEDD.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDD.GPIO_PinConfig.GPIO_PinNumber        = PIN_3;
+	handlerLEDD.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDD.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDD.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDD.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDD.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDE.pGPIOx								 = GPIOA;
-	handlerLEDE.GPIO_PinConfig.GPIO_PinNumber       = PIN_4;
-	handlerLEDE.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDE.GPIO_PinConfig.GPIO_PinNumber        = PIN_4;
+	handlerLEDE.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDE.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDE.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDE.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDE.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDF.pGPIOx								 = GPIOA;
-	handlerLEDF.GPIO_PinConfig.GPIO_PinNumber       = PIN_6;
-	handlerLEDF.GPIO_PinConfig.GPIO_PinMode		 = GPIO_MODE_OUT;
+	handlerLEDF.GPIO_PinConfig.GPIO_PinNumber        = PIN_6;
+	handlerLEDF.GPIO_PinConfig.GPIO_PinMode		 	 = GPIO_MODE_OUT;
 	handlerLEDF.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
 	handlerLEDF.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerLEDF.GPIO_PinConfig.GPIO_PinPuPdControl  = GPIO_PUPDR_NOTHING;
+	handlerLEDF.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
 
 	handlerLEDG.pGPIOx								 = GPIOA;
 	handlerLEDG.GPIO_PinConfig.GPIO_PinNumber        = PIN_7;
@@ -292,19 +292,19 @@ void init_system(void){
 
 	//Se configuran las salidas de los transistores
 	handlerT1.pGPIOx								 = GPIOA;
-	handlerT1.GPIO_PinConfig.GPIO_PinNumber        = PIN_8;
+	handlerT1.GPIO_PinConfig.GPIO_PinNumber        	 = PIN_8;
 	handlerT1.GPIO_PinConfig.GPIO_PinMode			 = GPIO_MODE_OUT;
-	handlerT1.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
-	handlerT1.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerT1.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
+	handlerT1.GPIO_PinConfig.GPIO_PinOType		 	 = GPIO_OTYPE_PUSHPULL;
+	handlerT1.GPIO_PinConfig.GPIO_PinSpeed		 	 = GPIO_OSPEED_FAST;
+	handlerT1.GPIO_PinConfig.GPIO_PinPuPdControl   	 = GPIO_PUPDR_NOTHING;
 
 	//transistor de las decenas
 	handlerT2.pGPIOx								 = GPIOA;
-	handlerT2.GPIO_PinConfig.GPIO_PinNumber        = PIN_9;
+	handlerT2.GPIO_PinConfig.GPIO_PinNumber          = PIN_9;
 	handlerT2.GPIO_PinConfig.GPIO_PinMode			 = GPIO_MODE_OUT;
-	handlerT2.GPIO_PinConfig.GPIO_PinOType		 = GPIO_OTYPE_PUSHPULL;
-	handlerT2.GPIO_PinConfig.GPIO_PinSpeed		 = GPIO_OSPEED_FAST;
-	handlerT2.GPIO_PinConfig.GPIO_PinPuPdControl   = GPIO_PUPDR_NOTHING;
+	handlerT2.GPIO_PinConfig.GPIO_PinOType			 = GPIO_OTYPE_PUSHPULL;
+	handlerT2.GPIO_PinConfig.GPIO_PinSpeed			 = GPIO_OSPEED_FAST;
+	handlerT2.GPIO_PinConfig.GPIO_PinPuPdControl   	 = GPIO_PUPDR_NOTHING;
 
 	//se carga la configuracion en el GPIO
 	GPIO_Config(&handlerLEDA);
