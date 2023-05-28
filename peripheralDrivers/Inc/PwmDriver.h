@@ -1,8 +1,8 @@
 /*
  * PwmDriver.h
  *
- *  Created on: May 14, 2022
- *      Author: namontoy
+ *  Created on: May 23, 2023
+ *      Author: aristizabal
  */
 
 #ifndef PWMDRIVER_H_
