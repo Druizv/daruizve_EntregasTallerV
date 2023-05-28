@@ -1,17 +1,14 @@
 /*
  * BasicTimer.c
  *
- *  Created on: Mar 26, 2023
- *      Author: druiz
+ *  Created on: Apr 18, 2022
+ *      Author: namontoy
  */
-
 
 #include "BasicTimer.h"
 
 /* Variable que guarda la referencia del periférico que se esta utilizando*/
 TIM_TypeDef	*ptrTimerUsed;
-
-void BasicTimer_Callback(void);
 
 /* Función en la que cargamos la configuración del Timer
  * Recordar que siempre se debe comenzar con activar la señal de reloj
@@ -78,6 +75,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 		/* Escriba codigo aca */
 		ptrBTimerHandler->ptrTIMx->CR1 &= ~TIM_CR1_DIR;
 
+
 		/* 3b. Configuramos el Auto-reload. Este es el "limite" hasta donde el CNT va a contar */
 		ptrBTimerHandler->ptrTIMx->ARR = ptrBTimerHandler->TIMx_Config.TIMx_period - 1;
 
@@ -93,7 +91,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 
 
 		/* 3b. Configuramos el Auto-reload. Este es el "limite" hasta donde el CNT va a contar
-		 * En modo descendente, con numero positivos, cual es el minimo valor al que ARR puede llegar*/
+		 * En modo descendente, con numero positivos, cual es el minimi valor al que ARR puede llegar*/
 		/* Escriba codigo aca */
 		ptrBTimerHandler->ptrTIMx->ARR = 0;
 
@@ -108,45 +106,43 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 
 	/* 5. Activamos la interrupción debida al Timerx Utilizado
 	 * Modificar el registro encargado de activar la interrupcion generada por el TIMx*/
-	/* Escriba codigo aca */
 	if(ptrBTimerHandler->TIMx_Config.TIMx_interruptEnable == BTIMER_INTERRUPT_ENABLE){
 		ptrBTimerHandler->ptrTIMx->DIER |= TIM_DIER_UIE;
-
-		//poner las interrupciones aquí, porque por fuera las está matriculando innecesariamente
-		/* 6. Activamos el canal del sistema NVIC para que lea la interrupción*/
-		if(ptrBTimerHandler->ptrTIMx == TIM2){
-			// Activando en NVIC para la interrupción del TIM2
-			NVIC_EnableIRQ(TIM2_IRQn);
-		}
-		else if(ptrBTimerHandler->ptrTIMx == TIM3){
-			// Activando en NVIC para la interrupción del TIM3
-			/* Escriba codigo aca */
-			NVIC_EnableIRQ(TIM3_IRQn);
-		}
-		else if(ptrBTimerHandler->ptrTIMx == TIM4){
-			// Activando en NVIC para la interrupción del TIM4
-			/* Escriba codigo aca */
-			NVIC_EnableIRQ(TIM4_IRQn);
-		}
-		else if(ptrBTimerHandler->ptrTIMx == TIM5){
-			// Activando en NVIC para la interrupción del TIM5
-			/* Escriba codigo aca */
-			NVIC_EnableIRQ(TIM5_IRQn);
-		}
-		else{
-			__NOP();
-		}
-
-		/* 7. Volvemos a activar las interrupciones del sistema */
-		__enable_irq();
-
-
-
 	}
 	else if(ptrBTimerHandler->TIMx_Config.TIMx_interruptEnable == BTIMER_INTERRUPT_DISABLE){
 		ptrBTimerHandler->ptrTIMx->DIER &= ~TIM_DIER_UIE;
+
 	}
-//	ptrBTimerHandler->ptrTIMx->DIER |= SET;
+	/* Escriba codigo aca */
+	ptrBTimerHandler->ptrTIMx->DIER |= SET;
+
+	/* 6. Activamos el canal del sistema NVIC para que lea la interrupción*/
+	if(ptrBTimerHandler->ptrTIMx == TIM2){
+		// Activando en NVIC para la interrupción del TIM2
+		NVIC_EnableIRQ(TIM2_IRQn);
+	}
+	else if(ptrBTimerHandler->ptrTIMx == TIM3){
+		// Activando en NVIC para la interrupción del TIM3
+		/* Escriba codigo aca */
+		NVIC_EnableIRQ(TIM3_IRQn);
+	}
+	else if(ptrBTimerHandler->ptrTIMx == TIM4){
+		// Activando en NVIC para la interrupción del TIM2
+		NVIC_EnableIRQ(TIM4_IRQn);
+	}
+	else if(ptrBTimerHandler->ptrTIMx == TIM5){
+		// Activando en NVIC para la interrupción del TIM2
+		NVIC_EnableIRQ(TIM5_IRQn);
+	}
+
+	else{
+		__NOP();
+	}
+
+
+
+	/* 7. Volvemos a activar las interrupciones del sistema */
+	__enable_irq();
 }
 
 __attribute__((weak)) void BasicTimer2_Callback(void){
@@ -154,6 +150,7 @@ __attribute__((weak)) void BasicTimer2_Callback(void){
 	            the BasicTimerX_Callback could be implemented in the main file
 	   */
 	__NOP();
+
 }
 __attribute__((weak)) void BasicTimer3_Callback(void){
 	  /* NOTE : This function should not be modified, when the callback is needed,
@@ -175,45 +172,44 @@ __attribute__((weak)) void BasicTimer5_Callback(void){
 }
 
 
-
-
-
 /* Esta es la función a la que apunta el sistema en el vector de interrupciones.
  * Se debe utilizar usando exactamente el mismo nombre definido en el vector de interrupciones,
  * Al hacerlo correctamente, el sistema apunta a esta función y cuando la interrupción se lanza
  * el sistema inmediatamente salta a este lugar en la memoria*/
 void TIM2_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	TIM2->SR &= ~TIM_SR_UIF;//cambiar el puntero por TIM2,TIM3.....
-	BasicTimer2_Callback();
-}
+	TIM2->SR &= ~TIM_SR_UIF;
+
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
-	//BasicTimer2_Callback();
+	BasicTimer2_Callback();
+
+}
 void TIM3_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
 	TIM3->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer3_Callback();
+
 }
 void TIM4_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
 	TIM4->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer4_Callback();
+
 }
 void TIM5_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
 	TIM5->SR &= ~TIM_SR_UIF;
+
+	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer5_Callback();
+
 }
-
-
 void BasicTimer_Callback(void){
 	__NOP();
 }
 
-void startTimer(BasicTimer_Handler_t *ptrBTimerHandler){
-	ptrBTimerHandler->ptrTIMx->CR1 |= TIM_CR1_CEN;
-}
 
-void stopTimer(BasicTimer_Handler_t *ptrBTimerHandler){
-	ptrBTimerHandler->ptrTIMx->CR1 &= ~TIM_CR1_CEN;
-}

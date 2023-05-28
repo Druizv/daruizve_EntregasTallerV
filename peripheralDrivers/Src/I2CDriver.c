@@ -1,356 +1,223 @@
-/*
- * USARTxDriver.c
+/*I2CDriver
  *
- *  Created on: Apr 6, 2022
- *      Author: namontoy
  */
 
-#include <stm32f4xx.h>
-#include "USARTxDriver.h"
+#include <stdint.h>
+#include "I2CDriver.h"
 
-/**
- * Configurando el puerto Serial...
- * Recordar que siempre se debe comenzar con activar la señal de reloj
- * del periferico que se está utilizando.
+/*
+ * Recordar que se debe configurar los pines para el I2C (SDA y SCL),
+ * para lo cual se necesita el modulo GPIO y los pines configurados
+ * en el modo alternate function.
+ * Además, estos pines deben ser configurados como salidas open-drain
+ * y con la resistencia en modo pull-up
  */
-
-uint8_t auxRxData = 0;
-
-void USART_Config(USART_Handler_t *ptrUsartHandler){
-
-	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
-	/* Lo debemos hacer para cada uno de las pisbles opciones que tengamos (USART1, USART2, USART6) */
-    /* 1.1 Configuramos el USART1 */
-	if(ptrUsartHandler->ptrUSARTx == USART1){
-		// Escriba acá su código
-		RCC->APB2ENR &= ~RCC_APB2ENR_USART1EN;
-		RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
+void i2c_config(I2C_Handler_t *ptrHandlerI2C){
+	//1 Activamos la señal de reloj para el módulo I2C seleccionado
+	if (ptrHandlerI2C->ptrI2Cx == I2C1){
+		RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
+	}
+	else if (ptrHandlerI2C->ptrI2Cx == I2C2){
+		RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+	}
+	else if (ptrHandlerI2C->ptrI2Cx == I2C3){
+		RCC->APB1ENR |= RCC_APB1ENR_I2C3EN;
 	}
 
-    /* 1.2 Configuramos el USART2 */
-    // Escriba acá su código
-	else if(ptrUsartHandler->ptrUSARTx == USART2){
+	//2.Reiniciamos el periférico, de forma que inicia en un estado conocido
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_SWRST;
+	__NOP();
+	ptrHandlerI2C->ptrI2Cx->CR1 &= ~I2C_CR1_SWRST;
 
-		RCC->APB1ENR &= ~RCC_APB1ENR_USART2EN;
-		RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
-	}
+	//3. Indicamos cual es la velocidad del reloj principal, que es la señal utilizada
+	//por el periferico para activar la señal de reloj para el bus I2C
+	ptrHandlerI2C->ptrI2Cx->CR2 &= ~(0b111111 << I2C_CR2_FREQ_Pos);//borramos la configuracion anterior
+	ptrHandlerI2C->ptrI2Cx->CR2 |= (MAIN_CLOCK_16_MHz_FOR_I2C << I2C_CR2_FREQ_Pos);
 
-    /* 1.3 Configuramos el USART6 */
-    // Escriba acá su código
-	else if(ptrUsartHandler->ptrUSARTx == USART6){
+	/*Configuramos el modo I2C en el que el sistema funciona
+	 * en esta configuracion se incluye tambien la velocidad del reloj
+	 * y el tiempo maximo para el cambio de la señal (T-Rise)
+	 * Todo comienza con los dos registros en cero
+	 */
+	ptrHandlerI2C->ptrI2Cx->CCR = 0;
+	ptrHandlerI2C->ptrI2Cx->TRISE = 0;
 
-		RCC->APB2ENR &= ~RCC_APB2ENR_USART6EN;
-		RCC->APB2ENR |= RCC_APB2ENR_USART6EN;
+	if (ptrHandlerI2C->modeI2C == I2C_MODE_SM){
+		//Estamos en el modo "standar" (SM MODE)
+		//Seleccionamos el modo estandar
+		ptrHandlerI2C->ptrI2Cx->CCR &= ~I2C_CCR_FS;
+
+		//configuramos el registro que se encarga de generar la señal de reloj
+		ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_SM_SPEED_100KHz << I2C_CCR_CCR_Pos);
+
+		//Configuramos el registro que controla el tiempo T-Rise máximo
+		ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_SM;
 	}
 	else{
+		//Estamos en modo "Fast" (FM mode)
+		//Seleccionamos el modo Fast
+		ptrHandlerI2C->ptrI2Cx->CCR |= I2C_CCR_FS;
+
+		//configuramos el registro que se encarga de generar la señal de reloj
+		ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_SPEED_400KHz << I2C_CCR_CCR_Pos);
+	}
+
+	/* 5. Activamos el modulo I2C */
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_PE;
+
+}
+
+/*8.Generamos la condicion de stop*/
+void i2c_stopTransaction(I2C_Handler_t *ptrHandlerI2C){
+	//7. Generamos la condicion de stop
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_STOP;
+}
+/*1. Verificamos que la linea no este ocupada - bit "busy" en  I"C CR2
+ *2.Generamos la señal "start"
+ *2a. Esperamos a que la bandera del evento "start" se levante
+ *Mientras esperamos, el valor de SB es 0, entonces la negacion (!) es 1*/
+void i2c_startTransaction(I2C_Handler_t *ptrHandlerI2C){
+	/*1. Verificamos que la linea no este ocupada - bit "busy" en  I"C CR2*/
+	while(ptrHandlerI2C->ptrI2Cx->SR2 & I2C_SR2_BUSY){
 		__NOP();
 	}
 
+	 //2.Generamos la señal "start"
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_START;
 
-	/* 2. Configuramos el tamaño del dato, la paridad y los bit de parada */
-	/* En el CR1 estan parity (PCE y PS) y tamaño del dato (M) */
-	/* Mientras que en CR2 estan los stopbit (STOP)*/
-	/* Configuracion del Baudrate (registro BRR) */
-	/* Configuramos el modo: only TX, only RX, o RXTX */
-	/* Por ultimo activamos el modulo USART cuando todo esta correctamente configurado */
-
-	// 2.1 Comienzo por limpiar los registros, para cargar la configuración desde cero
-	ptrUsartHandler->ptrUSARTx->CR1 = 0;
-	ptrUsartHandler->ptrUSARTx->CR2 = 0;
-
-	// 2.2 Configuracion del Parity:
-	// Verificamos si el parity esta activado o no
-    // Tenga cuidado, el parity hace parte del tamaño de los datos...
-	if(ptrUsartHandler->USART_Config.USART_parity != USART_PARITY_NONE){
-
-		// Verificamos si se ha seleccionado ODD or EVEN
-		if(ptrUsartHandler->USART_Config.USART_parity == USART_PARITY_EVEN){
-			// Es even, entonces cargamos la configuracion adecuada
-			// Escriba acá su código
-			ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_PS;
-
-		}else{
-			// Si es "else" significa que la paridad seleccionada es ODD, y cargamos esta configuracion
-			// Escriba acá su código
-			ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_PS;
-		}
-	}else{
-		// Si llegamos aca, es porque no deseamos tener el parity-check
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_PCE;
-	}
-
-	// 2.3 Configuramos el tamaño del dato
-    // Escriba acá su código
-	if(ptrUsartHandler->USART_Config.USART_datasize == USART_DATASIZE_8BIT){
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_M; // 8 bits
-	}
-	//si son 9 bits o si son 8 y con paridad activada
-	else if((ptrUsartHandler->USART_Config.USART_datasize == USART_DATASIZE_9BIT) || ((ptrUsartHandler->USART_Config.USART_parity != USART_PARITY_NONE)
-				&&(ptrUsartHandler->USART_Config.USART_datasize == USART_DATASIZE_8BIT))){
-		//se pone 1 en el registro
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_M;
-	}
-
-
-
-
-
-
-	// 2.4 Configuramos los stop bits (SFR USART_CR2)
-	switch(ptrUsartHandler->USART_Config.USART_stopbits){
-	case USART_STOPBIT_1: {
-		// Debemoscargar el valor 0b00 en los dos bits de STOP
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR2 &= ~USART_CR2_STOP;
-		break;
-	}
-	case USART_STOPBIT_0_5: {
-		// Debemoscargar el valor 0b01 en los dos bits de STOP
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR2 |= USART_CR2_STOP & (~USART_CR2_STOP_1);
-		break;
-	}
-	case USART_STOPBIT_2: {
-		// Debemoscargar el valor 0b10 en los dos bits de STOP
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR2 |= USART_CR2_STOP & (~USART_CR2_STOP_0);
-		break;
-	}
-	case USART_STOPBIT_1_5: {
-		// Debemoscargar el valor 0b11 en los dos bits de STOP
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR2 |= USART_CR2_STOP;
-		break;
-	}
-	default: {
-		// En el casopor defecto seleccionamos 1 bit de parada
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR2 &= ~USART_CR2_STOP;
-		break;
-	}
-	}
-
-	// 2.5 Configuracion del Baudrate (SFR USART_BRR)
-	// Ver tabla de valores (Tabla 73), Frec = 16MHz, overr = 0;
-	if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600){
-		// El valor a cargar es 104.1875 -> Mantiza = 104,fraction = 0.1875
-		// Mantiza = 104 = 0x68, fraction = 16 * 0.1875 = 3
-		// Valor a cargar 0x0683
-		// Configurando el Baudrate generator para una velocidad de 9600bps
-		ptrUsartHandler->ptrUSARTx->BRR = 0x0683;
-	}
-
-	else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200) {
-		// El valor a cargar es 52.0625 -> Mantiza = 52,fraction = 0.0625
-		// Mantiza = 52 = 0x34, fraction = 16 * 0.1875 = 1
-		// Escriba acá su código y los comentarios que faltan
-		// Valor a agregar 0x0341
-		ptrUsartHandler->ptrUSARTx->BRR = 0x0341;
-	}
-
-	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
-		// Escriba acá su código y los comentarios que faltan
-		// El valor a cargar es 8.6875 -> Mantiza = 8,fraction = 0.6875
-		// Mantiza = 8 = 0x8, fraction = 16 * 0.6875 = 11
-		// Valor a cargar 0x08B
-		ptrUsartHandler->ptrUSARTx->BRR = 0x008B;
-	}
-
-	// Ver tabla de valores (Tabla 73), Frec = 80MHz
-	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600_80MHz){
-		// Escriba acá su código y los comentarios que faltan
-		// El valor a cargar es 520.833333333 -> Mantiza = 520, fraction = 0.833333333
-		// Mantiza = 520 = 0x208, fraction = 16 * 0.833333333 = 13
-		// Valor a cargar 0x02B6
-		ptrUsartHandler->ptrUSARTx->BRR = 0x208D;
-	}
-
-	// Ver tabla de valores (Tabla 73), Frec = 80MHz
-	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200_80MHz){
-		// Escriba acá su código y los comentarios que faltan
-		// El valor a cargar es 260.416666667 -> Mantiza = 260, fraction = 0.416666667
-		// Mantiza = 260 = 104, fraction = 16 * 0.416666667 = 6
-		// Valor a cargar 0x02B6
-		ptrUsartHandler->ptrUSARTx->BRR = 0x1046;
-	}
-
-	// Ver tabla de valores (Tabla 73), Frec = 80MHz
-	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200_80MHz){
-		// Escriba acá su código y los comentarios que faltan
-		// El valor a cargar es 43.40278 -> Mantiza = 43, fraction = 0.40278
-		// Mantiza = 43 = 0x2B, fraction = 16 * 0.40278 = 6
-		// Valor a cargar 0x02B6
-		ptrUsartHandler->ptrUSARTx->BRR = 0x2B6;
-	}
-
-	// 2.6 Configuramos el modo: TX only, RX only, RXTX, disable
-	switch(ptrUsartHandler->USART_Config.USART_mode){
-	case USART_MODE_TX:
-	{
-		// Activamos la parte del sistema encargada de enviar
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TE;
-		break;
-	}
-	case USART_MODE_RX:
-	{
-		// Activamos la parte del sistema encargada de recibir
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RE;
-		break;
-	}
-	case USART_MODE_RXTX:
-	{
-		// Activamos ambas partes, tanto transmision como recepcion
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RE;
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= (USART_CR1_TE | USART_CR1_RE);
-		break;
-	}
-	case USART_MODE_DISABLE:
-	{
-		// Desactivamos ambos canales
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RE;
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TE;
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_UE;
-		break;
-	}
-
-	default:
-	{
-		// Actuando por defecto, desactivamos ambos canales
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RE;
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TE;
-		break;
-	}
-	}
-
-	// 2.7 Activamos el modulo serial.
-	if(ptrUsartHandler->USART_Config.USART_mode != USART_MODE_DISABLE){
-		// Escriba acá su código
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_UE;
-
-	}
-	else {
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_UE;
-	}
-
-
-	/* 2.8 Activando las interrupciones*/
-	__disable_irq();
-
-	// Recepcion
-	if(ptrUsartHandler->USART_Config.USART_enableIntRX == USART_RX_INTERRUPT_ENABLE){
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RXNEIE;
-	}
-	else {
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
-	}
-	// Transmision
-	if(ptrUsartHandler->USART_Config.USART_enableIntTX == USART_TX_INTERRUPT_ENABLE){
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
-	}
-	else {
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
-	}
-
-	//Matriculamos el NVIC
-	if(ptrUsartHandler->ptrUSARTx == USART1){
-		__NVIC_EnableIRQ(USART1_IRQn);
-	}
-	else if(ptrUsartHandler->ptrUSARTx == USART2){
-		__NVIC_EnableIRQ(USART2_IRQn);
-	}
-	else if(ptrUsartHandler->ptrUSARTx == USART6){
-		__NVIC_EnableIRQ(USART6_IRQn);
-	}
-
-	__enable_irq();
-
-} //FIN del USART config
-
-
-/* funcion para escribir un solo char */
-int writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend ){
-	while( !(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TXE)){
+	/*2a. Esperamos a que la bandera del evento "start" se levante
+	 *Mientras esperamos, el valor de SB es 0, entonces la negacion (!) es 1*/
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 & I2C_SR1_SB)){
 		__NOP();
 	}
 
-	// Escriba acá su código
-	ptrUsartHandler->ptrUSARTx->DR = dataToSend;
-
-	return dataToSend;
 }
 
-/** Funcion para escribir todo un string */
-void writeMsg(USART_Handler_t *ptrUsartHandler, char *msgToSend){
-	int caracter = 0;
-	while(msgToSend[caracter] != '\0'){
-		writeChar(ptrUsartHandler, msgToSend[caracter]);
-		caracter++;
+void i2c_reStartTransaction(I2C_Handler_t *ptrHandlerI2C){
+	//generamos la señal "start"
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_START;
+
+	/*2a. Esperamos a que la bandera del evento "start" se levante
+	 *Mientras esperamos, el valor de SB es 0, entonces la negacion (!) es 1*/
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 & I2C_SR1_SB)){
+		__NOP();
 	}
 }
 
+//Activamos la indicacion para no-ACK (indicacion para el slave de terminar)
+void i2c_sendNoACK(I2C_Handler_t *ptrHandlerI2C){
+	//Debemos escribir 0 en la posicion ACK del registro de contro 1
+	ptrHandlerI2C->ptrI2Cx->CR1 &= ~I2C_CR1_ACK;
+}
 
-
-
-
-/** Función para recibir datos */
-uint8_t getRxData(void){
-
-	return auxRxData;
+//Activamos la indicacion para ACK (indicacion para el slave de continuar)
+void i2c_sendACK(I2C_Handler_t *ptrHandlerI2C){
+	//Debemos escribir 0 en la posicion ACK del registro de contro 1
+	ptrHandlerI2C->ptrI2Cx->CR1 |= I2C_CR1_ACK;
 }
 
 
-/* handler de la interrupción del USART1 */
-void USART1_IRQHandler(void){
-	// Evaluamos si la interrupción que se dio es por RX
-	if(USART1->SR & USART_SR_RXNE){
-		auxRxData = (uint8_t) USART1->DR;
-		usart1Rx_Callback();
+void sendSlaveAddressRW(I2C_Handler_t *ptrHandlerI2C, uint8_t slaveAddress,uint8_t readOrWrite){
+	/*0.Definimos la variable auxiliar*/
+	uint8_t auxByte = 0;
+	(void) auxByte;
+	/*3.Enviamos la direccion del Slave y el bit que indica que desamos escribir 0
+	 * En el siguiente paso se enviara la direccion de memoria que se desea escribir*/
+	ptrHandlerI2C->ptrI2Cx->DR = (slaveAddress << 1) | readOrWrite;
+
+	/*3.1 esperamos hasta que la bandera del evento "addr" se levante
+	 * esto nos indica que la direccion fue enviada satisfactoriamente */
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 &= I2C_SR1_ADDR)){
+		__NOP();
+	}
+
+	/*Debemos limpiar la bandera de la recepcion ACK de la "addr", para lo cual
+	 * debemos leer en secuencia primero el I2C CR1 y luego el I2C CR2*/
+	auxByte = ptrHandlerI2C->ptrI2Cx->CR1;
+	auxByte = ptrHandlerI2C->ptrI2Cx->CR2;
+}
+
+void sendMemoryAddress(I2C_Handler_t *ptrHandlerI2C, uint8_t memAddr){
+	/*escribimos la direccion de memoria que deseamos leer*/
+	ptrHandlerI2C->ptrI2Cx->DR = memAddr;
+
+	//4.1 esperamos hasta que el byte sea transmitido
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 & I2C_SR1_TXE)){
+		__NOP();
 	}
 }
 
-/* handler de la interrupción del USART2 */
-void USART2_IRQHandler(void){
-	// Evaluamos si la interrupción que se dio es por RX
-	if(USART2->SR & USART_SR_RXNE){
-		auxRxData = (uint8_t) USART2->DR;
-		usart2Rx_Callback();
+void sendDataByte(I2C_Handler_t *ptrHandlerI2C, uint8_t dataToWrite){
+	/*5. Cargamos el valor que deseamos escribir*/
+	ptrHandlerI2C->ptrI2Cx->DR = dataToWrite;
+
+	/*6. esperamos hasta que el byte sea transmitido */
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 & I2C_SR1_BTF)){
+		__NOP();
 	}
 }
 
-/* handler de la interrupción del USART6 */
-void USART6_IRQHandler(void){
-	// Evaluamos si la interrupción que se dio es por RX
-	if(USART6->SR & USART_SR_RXNE){
-		auxRxData = (uint8_t) USART6->DR;
-		usart6Rx_Callback();
+uint8_t readDataByte(I2C_Handler_t *ptrHandlerI2C){
+	//9. Esperamos hasta que el byte sea recibido
+	while(!(ptrHandlerI2C->ptrI2Cx->SR1 & I2C_SR1_RXNE)){
+		__NOP();
 	}
+	ptrHandlerI2C->dataI2C = ptrHandlerI2C->ptrI2Cx->DR;
+	return ptrHandlerI2C->dataI2C;
 }
 
-/** Funciones callback weak, que pueden ser sobre-escritas*/
-__attribute__((weak)) void usart1Rx_Callback(void){
-		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
-		 */
-	__NOP();
+
+uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead){
+
+	//0.Creamos una variable auxiliar para recibir el dato que leemos
+	uint8_t auxRead = 0;
+
+	//1.Generamos la condicion de "start"
+	i2c_startTransaction(ptrHandlerI2C);
+
+	//2.Enviamos la direccion del esclavo y la indicacion de ESCRIBIR
+	i2c_sendSlaveAddresRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress,I2C_WRITE_DATA);
+
+	//3.Enviamos la direccion de memoria que deseamos leer
+	i2c_sendMemoryAddress(ptrHandlerI2C, regToRead);
+
+	//4.creamos una condicion de restart
+	i2c_reStartTransaction(ptrHandlerI2C);
+
+	//5.Enviamos la direccion del esclavo y la indicacion de LEER
+	i2c_sendSlaveAddresRW(ptrHandlerI2C,ptrHandlerI2C->slaveAddress,I2C_READ_DATA);
+
+	//6.Leemos el dato que envia el esclavo
+	auxRead = i2c_readDataByte(ptrHandlerI2C);
+
+	//7.Generamos la condicion de NoACK, para que el master no responda y el slave solo envie 1 byte
+	i2c_sendNoAck(ptrHandlerI2C);
+
+	//8.Generamos la condicion de stop para que el slave se detenga despues de enviar 1 byte
+	i2c_stopTransaction(ptrHandlerI2C);
+
+	return auxRead;
+
 }
-__attribute__((weak)) void usart2Rx_Callback(void){
-		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
-		 */
-	__NOP();
+void writeSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead, uint8_t newValue){
+	//1.Generamos la condicion de start
+	i2c_startTransaction(ptrHandlerI2C);
+
+	//2.Enviamos la direccion de el esclavo y la indicacion de ESCRIBIR
+	i2c_sendSlaveAddresRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
+
+	//3.Enviamos la direccion de memoria que deseamos escribir
+	i2c_sendMemoryAddress(ptrHandlerI2C, regToRead);
+
+	//4.Enviamos el valor que deseamos escribir en el registro seleccionado
+	i2c_sendDataByte(ptrHandlerI2C, newValue);
+
+	//5.Generamos la condicion de stop para que el slave se detenga despues de enviar 1 byte
+	i2c_stopTransaction(ptrHandlerI2C);
+
 }
-__attribute__((weak)) void usart6Rx_Callback(void){
-		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
-		 */
-	__NOP();
-}
+
+
+
+
+

@@ -1,24 +1,22 @@
 /*
  * ExtiDriver.h
  *
- *  Created on: Mar 28, 2023
- *      Author: aristizabal
+ *  Created on: May 10, 2022
+ *      Author: namontoy
  */
 
+#ifndef EXTIDRIVERH
+#define EXTIDRIVERH
 
-#ifndef EXTIDRIVER_H_
-#define EXTIDRIVER_H_
-
+#include <GPIOxDriver.h>
 #include "stm32f4xx.h"
-#include "GPIOxDriver.h"
 
-#define EXTERNAL_INTERRUPT_FALLING_EDGE		0
-#define EXTERNAL_INTERRUPT_RISING_EDGE		1
+#define EXTERNAL_INTERRUPT_FALLING_EDGE        0
+#define EXTERNAL_INTERRUPT_RISING_EDGE        1
 
-typedef struct
-{
-	GPIO_Handler_t *pGPIOHandler;	// Canal ADC que será utilizado para la conversión ADC
-	uint8_t			edgeType;		// Se selecciona si se desea un tipo de flanco subiendo o bajando
+typedef struct{
+    GPIO_Handler_t *pGPIOHandler;        // Canal ADC que será utilizado para la conversión ADC
+    uint8_t            edgeType;        // Se selecciona si se desea un tipo de flanco subiendo o bajando
 }EXTI_Config_t;
 
 
@@ -40,5 +38,4 @@ void callback_extInt13(void);
 void callback_extInt14(void);
 void callback_extInt15(void);
 
-
-#endif /* EXTIDRIVER_H_ */
+#endif /*EXTIDRIVERH */

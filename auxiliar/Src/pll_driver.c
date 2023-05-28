@@ -49,11 +49,11 @@ void RCC_config(void){
 	RCC -> CFGR &= ~RCC_CFGR_HPRE;
 	RCC -> CFGR |= RCC_CFGR_HPRE_DIV1;
 
-	/* el preescaler de APB1  */
+	/* el preescaler de APB1 en division por 2 para los perifericos que trabajan maximo en 50MHz */
 	RCC -> CFGR &= ~RCC_CFGR_PPRE1;
 	RCC -> CFGR |= RCC_CFGR_PPRE1_DIV2;
 
-	/* el preescaler de APB1 en division por 1, queda en 80MHz */
+	/* el preescaler de APB1 en division por 1, queda en 100MHz */
 	RCC -> CFGR &= ~RCC_CFGR_PPRE2;
 	RCC -> CFGR |= RCC_CFGR_PPRE2_DIV1;
 
@@ -61,7 +61,7 @@ void RCC_config(void){
 	RCC -> CFGR &= ~RCC_CFGR_MCO1;
 	RCC -> CFGR |= RCC_CFGR_MCO1;
 
-	/*division por 5 para tener a la salida 20MHz */
+	/* Se le hace un preescaler de division por 5 para tener a la salida 20MHz */
 	RCC -> CFGR &= ~RCC_CFGR_MCO1PRE;
 	RCC -> CFGR |= RCC_CFGR_MCO1PRE;
 
