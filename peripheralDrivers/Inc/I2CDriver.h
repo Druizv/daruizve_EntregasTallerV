@@ -21,7 +21,7 @@
 #define I2C_MODE_FM_SPEED_400KHz     14
 
 #define I2C_MAX_RISE_TIME_SM         17
-#define I2C_MAX_RISE_TIME_FM         5
+#define I2C_MAX_RISE_TIME_FM         6
 
 typedef struct
 {

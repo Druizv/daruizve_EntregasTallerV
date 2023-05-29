@@ -15,9 +15,13 @@
 #define USART_MODE_RXTX		2
 #define USART_MODE_DISABLE	3
 
-#define USART_BAUDRATE_9600		0
-#define USART_BAUDRATE_19200	1
-#define USART_BAUDRATE_115200	2
+#define USART_BAUDRATE_9600			0
+#define USART_BAUDRATE_19200		1
+#define USART_BAUDRATE_115200		2
+
+#define USART_BAUDRATE_80MHz_9600   2
+#define USART_BAUDRATE_80MHz_19200	3
+#define USART_BAUDRATE_80MHz_115200	4
 
 #define USART_DATASIZE_8BIT		0
 #define USART_DATASIZE_9BIT		1
@@ -30,6 +34,12 @@
 #define USART_STOPBIT_0_5	1
 #define USART_STOPBIT_2		2
 #define USART_STOPBIT_1_5	3
+
+#define USART_RX_INTERRUPT_ENABLE	1
+#define USART_RX_INTERRUPT_DISABLE	0
+
+#define USART_TX_INTERRUPT_ENABLE	1
+#define USART_TX_INTERRUPT_DISABLE	0
 
 /* Estructura para la configuración de la comunicacion:
  * Velocidad (baudrate)
@@ -44,6 +54,8 @@ typedef struct
 	uint8_t USART_datasize;
 	uint8_t USART_parity;
 	uint8_t USART_stopbits;
+	uint8_t USART_enableIntRX;
+	uint8_t USART_enableIntTX;
 }USART_Config_t;
 
 /*
@@ -69,7 +81,15 @@ typedef struct
 
 /* Definicion de los prototipos para las funciones del USART */
 void USART_Config(USART_Handler_t *ptrUsartHandler);
-int writeChar(USART_Handler_t *ptrUsartHandler, int dataToSend );
+
+int writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend );
+void writeMsg(USART_Handler_t *ptrUsartHandler, char *msgToSend );
+
+uint8_t getRxData(void);
+
+void usart1Rx_Callback(void);
+void usart2Rx_Callback(void);
+void usart6Rx_Callback(void);
 
 
 #endif /* USARTXDRIVER_H_ */
