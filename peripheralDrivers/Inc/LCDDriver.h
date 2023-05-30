@@ -1,4 +1,3 @@
-
 #ifndef LCDDRIVER_H_
 #define LCDDRIVER_H_
 
@@ -42,5 +41,4 @@ void LCD_ClearScreen(I2C_Handler_t *ptrHandlerI2C, uint8_t);
 void LCD_writeData(I2C_Handler_t *ptrHandlerI2C, uint8_t dataToWrite);
 
 #define LCD_ADDRESS		0x25
-
 #endif /* LCDDriver_H_ */
