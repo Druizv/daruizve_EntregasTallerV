@@ -1,13 +1,5 @@
-/**
- ******************************************************************************
- * @file           : main.c
- * @author         : aristizabal by STM32CubeIDE
- * @Nombre          : Jhony Steven Aristizabal Serna
- * @brief          : main Tarea Especial
- ******************************************************************************
 
- ******************************************************************************
- */
+
 
 #include <stdint.h>
 #include <stdio.h>
@@ -250,11 +242,11 @@ void i2cLCD(void){
 	LCD_Clear(&handlerLCD);
 	delay_10();
 	LCD_setCursor(&handlerLCD, 0, 0);
-	LCD_sendSTR(&handlerLCD, "No quiero");
+	LCD_sendSTR(&handlerLCD, "A");
 	LCD_setCursor(&handlerLCD, 0, 1);
-	LCD_sendSTR(&handlerLCD, "Jugar mas");
+	LCD_sendSTR(&handlerLCD, "B");
 	LCD_setCursor(&handlerLCD, 0, 2);
-	LCD_sendSTR(&handlerLCD, "A la universidad");
+	LCD_sendSTR(&handlerLCD, "C");
 }
 
 

@@ -19,6 +19,7 @@
 #include "PllDriver.h"
 #include "I2CDriver.h"
 #include "LCDDriver.h"
+#include "PwmDriver.h"
 
 #include "arm_math.h"
 #include <math.h>
@@ -74,6 +75,18 @@ uint8_t i2cBuffer = {0};
 uint16_t counterSampling = {0};
 uint8_t counterFlag = {0};
 
+//PWM
+GPIO_Handler_t handlerLEDX = {0};
+GPIO_Handler_t handlerLEDY = {0};
+GPIO_Handler_t handlerLEDZ = {0};
+
+PWM_Handler_t handlerPwmLEDX = {0};
+PWM_Handler_t handlerPwmLEDY = {0};
+PWM_Handler_t handlerPwmLEDZ = {0};
+
+uint16_t duttyX         = 0;
+uint16_t duttyY         = 0;
+uint16_t duttyZ			= 0;
 
 #define ACCEL_ADDRESS          	 0x1D
 #define ACCEL_XOUT_L             50     //DATAX0
@@ -116,6 +129,7 @@ int main(void){
 //	LCD_sendSTR(&handlerLCD, "quiero morir");
 
 	while(1){
+
 		if(rxData != '\0'){
 			writeChar(&usart2comm, rxData);
 
@@ -153,6 +167,9 @@ int main(void){
 				int16_t AccelX = AccelX_high << 8 | AccelX_low;
 				sprintf(bufferData, "AccelX = %.2f \n", (float) (AccelX/256.f)*9.78);
 				writeMsg(&usart2comm, bufferData);
+				uint16_t duttyX = (AccelX/256.f)*9.78;
+				updateDuttyCycle(&handlerPwmLEDX, duttyX);
+
 				rxData = '\0';
 			}
 			else if(rxData == 'y'){
@@ -163,6 +180,8 @@ int main(void){
 				int16_t AccelY = AccelY_high << 8 | AccelY_low;
 				sprintf(bufferData, "AccelY = %.2f \n", (AccelY/256.f)*9.78);
 				writeMsg(&usart2comm, bufferData);
+				uint16_t duttyY = (AccelY/256.f)*9.78;
+				updateDuttyCycle(&handlerPwmLEDY, duttyY);
 				rxData = '\0';
 			}
 			else if(rxData == 'z'){
@@ -174,6 +193,8 @@ int main(void){
 				int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
 				sprintf(bufferData, "AccelZ = %.2f \n",  (AccelZ/256.f)*9.78);
 				writeMsg(&usart2comm, bufferData);
+				uint16_t duttyZ = (AccelZ/256.f)*9.78;
+				updateDuttyCycle(&handlerPwmLEDZ, duttyZ);
 				rxData = '\0';
 			}
 
@@ -213,7 +234,7 @@ int main(void){
 					writeMsg(&usart2comm, bufferMsj);
 				}
 
-				usart2DataReceived = '\0';
+				rxData = '\0';
 
 			}
 
@@ -327,6 +348,68 @@ void init_Hardware(void){
 	handler_i2cSDA_LCD.GPIO_PinConfig.GPIO_PinAltFunMode					= AF9;
 	GPIO_Config(&handler_i2cSDA_LCD);
 
+/*  ====================================== PWM =============================================*/
+	handlerLEDX.pGPIOx 													= GPIOB;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinNumber 							= PIN_4;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinMode 							= GPIO_MODE_ALTFN;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinOPType 							= GPIO_OTYPE_PUSHPULL;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinSpeed 							= GPIO_OSPEED_FAST;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinPuPdControl 						= GPIO_PUPDR_NOTHING;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinAltFunMode 						= AF2;
+	GPIO_Config(&handlerLEDX);
+
+	//Configuracion PWMX
+	handlerPwmLEDX.ptrTIMx 												= TIM3;
+	handlerPwmLEDX.config.channel 										= PWM_CHANNEL_1;
+	handlerPwmLEDX.config.duttyCicle 									= duttyX;
+	handlerPwmLEDX.config.periodo 										= 20000;
+	handlerPwmLEDX.config.prescaler 									= 80;
+
+	pwm_Config(&handlerPwmLEDX);
+	enableOutput(&handlerPwmLEDX);
+	startPwmSignal(&handlerPwmLEDX);
+
+	//PIN Y
+	handlerLEDX.pGPIOx 													= GPIOB;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinNumber 							= PIN_5;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinMode 							= GPIO_MODE_ALTFN;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinOPType 							= GPIO_OTYPE_PUSHPULL;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinSpeed 							= GPIO_OSPEED_FAST;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinPuPdControl						= GPIO_PUPDR_NOTHING;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinAltFunMode 						= AF2;
+	GPIO_Config(&handlerLEDX);
+
+	handlerPwmLEDY.ptrTIMx 												= TIM3;
+	handlerPwmLEDY.config.channel 										= PWM_CHANNEL_2;
+	handlerPwmLEDY.config.duttyCicle 									= duttyY;
+	handlerPwmLEDY.config.periodo 										= 20000;
+	handlerPwmLEDY.config.prescaler 									= 80;
+
+	pwm_Config(&handlerPwmLEDY);
+	enableOutput(&handlerPwmLEDY);
+	startPwmSignal(&handlerPwmLEDY);
+
+	//PIN Z
+
+	handlerLEDX.pGPIOx 											= GPIOB;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinNumber 					= PIN_0;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinMode 					= GPIO_MODE_ALTFN;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinSpeed 					= GPIO_OSPEED_FAST;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	handlerLEDX.GPIO_PinConfig.GPIO_PinAltFunMode				= AF2;
+	GPIO_Config(&handlerLEDX);
+
+
+	handlerPwmLEDZ.ptrTIMx 												= TIM3;
+	handlerPwmLEDZ.config.channel 										= PWM_CHANNEL_3;
+	handlerPwmLEDZ.config.duttyCicle 									= duttyZ;
+	handlerPwmLEDZ.config.periodo 										= 20000;
+	handlerPwmLEDZ.config.prescaler 									= 80;
+
+	pwm_Config(&handlerPwmLEDZ);
+	enableOutput(&handlerPwmLEDZ);
+	startPwmSignal(&handlerPwmLEDZ);
 
 //	handlerLCD.ptrI2Cx                            			= I2C2;
 //	handlerLCD.modeI2C                            			= I2C_MODE_SM;
@@ -362,4 +445,8 @@ void usart2Rx_Callback(void){
 
 }
 
+void BasicTimer3_Callback(void){
 
+	usart2DataReceived = getRxData();
+
+}
