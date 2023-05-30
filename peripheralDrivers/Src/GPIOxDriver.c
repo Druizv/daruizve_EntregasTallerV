@@ -2,7 +2,7 @@
  * GPIOxDriver.c
  *
  *  Created on: Mar 9, 2023
- *      Author: aristizabal
+ *      Author: druiz
  */
 
 

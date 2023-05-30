@@ -2,7 +2,7 @@
  * GPIOxDriver.h
  *
  *  Created on: Mar 9, 2023
- *      Author: aristizabal
+ *      Author: druiz
  */
 
 #ifndef GPIOXDRIVER_H_

@@ -2,7 +2,7 @@
  * SysTickDriver.c
  *
  *  Created on: May 22, 2023
- *      Author: aristizabal
+ *      Author: druiz
  */
 
 

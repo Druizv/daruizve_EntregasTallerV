@@ -35,7 +35,7 @@ typedef struct
 void i2c_config(I2C_Handler_t *ptrHandlerI2C);
 void i2c_startTransaction(I2C_Handler_t *ptrHandlerI2C);
 void i2c_reStartTransaction(I2C_Handler_t *ptrHandlerI2C);
-void i2c_sendSlaveAddresRW(I2C_Handler_t *ptrHandlerI2C, uint8_t slaveAddress, uint8_t readOrWrite );
+void i2c_sendSlaveAddressRW(I2C_Handler_t *ptrHandlerI2C, uint8_t slaveAddress, uint8_t readOrWrite );
 void i2c_sendMemoryAddress(I2C_Handler_t *ptrHandlerI2C, uint8_t memAddr);
 void i2c_sendDataByte(I2C_Handler_t *ptrHandlerI2C, uint8_t dataToWrite);
 uint8_t i2c_readDataByte(I2C_Handler_t *ptrHandlerI2C);

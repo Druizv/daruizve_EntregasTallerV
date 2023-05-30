@@ -71,7 +71,7 @@ void init_Hardware(void){
 	handlerBlinkyPin.pGPIOx											= GPIOA;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber					= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode					= GPIO_MODE_OUT;
-	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOType					= GPIO_OTYPE_PUSHPULL;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed					= GPIO_OSPEED_FAST;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
 	GPIO_Config(&handlerBlinkyPin);

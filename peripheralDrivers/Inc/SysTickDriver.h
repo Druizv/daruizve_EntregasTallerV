@@ -2,7 +2,7 @@
  * SysTickDriver.h
  *
  *  Created on: May 22, 2023
- *      Author: aristizabal
+ *      Author: druiz
  */
 
 #ifndef SYSTICKDRIVER_H_
