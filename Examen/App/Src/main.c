@@ -36,7 +36,7 @@ uint8_t counter = 0;
 /* Elemento para hacer la comunicacion serial */
 GPIO_Handler_t handlerPinTX = {0};
 GPIO_Handler_t handlerPinRX = {0};
-USART_Handler_t usart2comm = {0};
+USART_Handler_t usart1comm = {0};
 PLL_Handler_t handlerPll = {0};
 
 
@@ -52,6 +52,10 @@ char   	bufferData [64]  = {0};
 uint8_t flagSample = 0;
 uint8_t numberSample = 0;
 uint8_t usart2DataReceived = 0;
+
+//MCO1
+pll_MCO1 handlerMCO1 = {0};
+
 
 bool stringComplete = false;
 
@@ -72,6 +76,7 @@ GPIO_Handler_t handler_i2cSDA = {0};
 I2C_Handler_t handlerAccelerometer = {0};
 
 PLL_Handler_t handlerpll  = {0};
+GPIO_Handler_t handlerCLK = {0};
 
 //Parametros
 unsigned int 	firstParameter = 0;
@@ -92,7 +97,7 @@ int main(void){
 	//Inicializamos todos los elementos del sistema
 	init_system();
 
-	writeMsg(&usart2comm, "iniciando \n");
+	writeMsg(&usart1comm, "iniciando \n");
 	while(1){
 
 		//Se verifica constantemente si tiene una nueva entrada y de ser asi entrara en los condicionales
@@ -176,15 +181,15 @@ void init_system(void){
 	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode					= AF7;
 	GPIO_Config(&handlerPinRX);
 
-	usart2comm.ptrUSARTx											= USART1;
-	usart2comm.USART_Config.USART_baudrate							= USART_BAUDRATE_100MHz_115200;
-	usart2comm.USART_Config.USART_datasize							= USART_DATASIZE_8BIT;
-	usart2comm.USART_Config.USART_parity							= USART_PARITY_NONE;
-	usart2comm.USART_Config.USART_stopbits							= USART_STOPBIT_1;
-	usart2comm.USART_Config.USART_mode								= USART_MODE_RXTX;
-	usart2comm.USART_Config.USART_enableIntRX						= USART_RX_INTERRUPT_ENABLE;
-	usart2comm.USART_Config.USART_enableIntTX						= USART_TX_INTERRUPT_DISABLE;
-	USART_Config(&usart2comm);
+	usart1comm.ptrUSARTx											= USART1;
+	usart1comm.USART_Config.USART_baudrate							= USART_BAUDRATE_100MHz_115200;
+	usart1comm.USART_Config.USART_datasize							= USART_DATASIZE_8BIT;
+	usart1comm.USART_Config.USART_parity							= USART_PARITY_NONE;
+	usart1comm.USART_Config.USART_stopbits							= USART_STOPBIT_1;
+	usart1comm.USART_Config.USART_mode								= USART_MODE_RXTX;
+	usart1comm.USART_Config.USART_enableIntRX						= USART_RX_INTERRUPT_ENABLE;
+	usart1comm.USART_Config.USART_enableIntTX						= USART_TX_INTERRUPT_DISABLE;
+	USART_Config(&usart1comm);
 
 
 	/* ========================== I2C ======================================================================*/
@@ -210,6 +215,16 @@ void init_system(void){
 	handlerAccelerometer.modeI2C                            			= I2C_MODE_FM;
 	handlerAccelerometer.slaveAddress                    				= ACCEL_ADDRESS;
 	i2c_config(&handlerAccelerometer);
+
+
+	handlerCLK.pGPIOx = GPIOA;
+	handlerCLK.GPIO_PinConfig.GPIO_PinNumber = PIN_8;
+	handlerCLK.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ALTFN;
+	handlerCLK.GPIO_PinConfig.GPIO_PinOPType = GPIO_OTYPE_PUSHPULL;
+	handlerCLK.GPIO_PinConfig.GPIO_PinSpeed = GPIO_OSPEED_FAST;
+	handlerCLK.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_PUPDR_NOTHING;
+	handlerCLK.GPIO_PinConfig.GPIO_PinAltFunMode = AF0;
+	GPIO_Config(&handlerCLK);
 
 /*  ====================================== PWM =============================================*/
 
@@ -266,26 +281,84 @@ void parseCommands (char *ptrBufferReception){
 //	}
 	// Este primer comando imprime una lista con los otros comandos que tiene el equipo.
 	if (strcmp(cmd, "help") == 0) {
-		writeMsg(&usart2comm, "\n");
-		writeMsg(&usart2comm, "Help menus CMDs:\n");
-		writeMsg(&usart2comm, "1) help ----	print help menu\n");
-		writeMsg(&usart2comm, "2) SetMCO ---Cambia el reloj del MCO\n");
-		writeMsg(&usart2comm, "3) SetMCOPre --- configura el prescaler del MCO\n");
-		writeMsg(&usart2comm, "4) setHour #Hour #Min #Seg ---- set the time\n");
-		writeMsg(&usart2comm, "5) gethour # ---- read current hour #(us) \n");
-		writeMsg(&usart2comm, "6) setDate #Day #Month Year ---- set the date \n");
-		writeMsg(&usart2comm, "7) getDate ---- read date current date\n");
-		writeMsg(&usart2comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
-		writeMsg(&usart2comm, "9) getADCData ---- muestra el arreglo de datos \n");
-		writeMsg(&usart2comm, "10) setDataAcc ---- captura datos del acelerometro \n");
-		writeMsg(&usart2comm, "11) getDataFFT ---- presenta la frecuencia del acelerometro FFT\n");
+		writeMsg(&usart1comm, "\n");
+		writeMsg(&usart1comm, "Help menus CMDs:\n");
+		writeMsg(&usart1comm, "1) help ----	print help menu\n");
+		writeMsg(&usart1comm, "2) SetMCO ---Cambia el reloj del MCO\n");
+		writeMsg(&usart1comm, "3) SetMCOPre --- configura el prescaler del MCO\n");
+		writeMsg(&usart1comm, "4) setTime #Hour #Min #Seg ---- set the time\n");
+		writeMsg(&usart1comm, "5) getTime # ---- read current hour #(us) \n");
+		writeMsg(&usart1comm, "6) setDate #Day #Month Year ---- set the date \n");
+		writeMsg(&usart1comm, "7) getDate ---- read date current date\n");
+		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
+		writeMsg(&usart1comm, "9) getADCData ---- muestra el arreglo de datos \n");
+		writeMsg(&usart1comm, "10) setDataAcc ---- captura datos del acelerometro \n");
+		writeMsg(&usart1comm, "11) getDataFFT ---- presenta la frecuencia del acelerometro FFT\n");
 
 	} else if (strcmp(cmd, "setMCO") == 0) {
+		/*
+		 * Para HSI: 0
+		 * Para LSE: 1
+		 * Para PLL: 2
+		 */
+		if (firstParameter == 0) {
+			handlerMCO1.clk = HSI;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilita el reloj HSI");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else if (firstParameter == 1) {
+			handlerMCO1.clk = LSE;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilita el reloj LSE");
+			writeMsg(&usart1comm, bufferData);
+		}
+
+		else if (firstParameter == 2) {
+			handlerMCO1.clk = PLL;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilita el reloj PLL");
+			writeMsg(&usart1comm, bufferData);
+		}
+
+
 
 	} else if (strcmp(cmd, "setMCOPre") == 0) {
+		if (firstParameter == 1){
+			handlerMCO1.presc = presc1;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilita Prescaler 1");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else if(firstParameter == 2){
+			handlerMCO1.presc = presc2;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilitó prescarler 2");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else if(firstParameter == 3){
+			handlerMCO1.presc = presc3;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilitó prescarler 3");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else if(firstParameter == 4){
+			handlerMCO1.presc = presc4;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilitó prescarler 4");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else if(firstParameter == 5){
+			handlerMCO1.presc = presc5;
+			MCOConfig(&handlerMCO1);
+			sprintf(bufferData, "Se habilitó prescarler 5");
+			writeMsg(&usart1comm, bufferData);
+		}
+
+
 
 	} else if (strcmp(cmd, "setDate") == 0) {
-		writeMsg(&usart2comm, bufferData);
+		writeMsg(&usart1comm, bufferData);
 		handlerRTC.RTC_Config.RTC_ValueDay = (unsigned int) firstParameter;
 		handlerRTC.RTC_Config.RTC_Month = (unsigned int) secondParameter;
 		handlerRTC.RTC_Config.RTC_Year = (unsigned int) thirdParameter;
@@ -294,16 +367,16 @@ void parseCommands (char *ptrBufferReception){
 		sprintf(bufferData, "la fecha es %u/%u/%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
 		sprintf(bufferData, "\n\rSe actualizo la fecha \n\rdia:%u  mes:%u  ano:%u\n\r", (unsigned int) firstParameter, secondParameter,thirdParameter + 2000);
 
-	} else if (strcmp(cmd, "setHour") == 0) {
+	} else if (strcmp(cmd, "setTime") == 0) {
 		handlerRTC.RTC_Config.RTC_Hours = (unsigned int) firstParameter;
 		handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) secondParameter;
 		handlerRTC.RTC_Config.RTC_Seconds = (unsigned int) thirdParameter;
 		RTC_Config(&handlerRTC);
 		sprintf(bufferData, "la hora es %u:%u:%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
 		sprintf(bufferData, "\n\rSe actualizo la hora \n\rhora:%u  minuto:%u  segundo:%u\n\r", (unsigned int) firstParameter, secondParameter, thirdParameter + 2000);
-		writeMsg(&usart2comm, bufferData);
+		writeMsg(&usart1comm, bufferData);
 
-	} else if (strcmp(cmd, "getDate") == 0) {
+	} else if (strcmp(cmd, "getTime") == 0) {
 		date = read_date();
 		secs = date[0];
 		mins = date[1];
@@ -312,18 +385,16 @@ void parseCommands (char *ptrBufferReception){
 		month = date[5];
 		year = date[6];
 		sprintf(bufferData, "\n\rLa fecha actual es: \n\rlas %u:%u:%u del %u/%u/%u\n\r", (unsigned int) hours, mins, secs, day, month, year);
-		writeMsg(&usart2comm, bufferData);
+		writeMsg(&usart1comm, bufferData);
 		sprintf(bufferData, "%u/%u/%u", (unsigned int) day, month, year);
 		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 
 	}
 
 	else{
-		//sprintf(bufferData, "Comando no reconocido\n\r");
-		//writeMsg(&usart2comm, bufferData);
-		//echo, envia lo que recibe
-		sprintf(bufferData, "Recibido el Char = %c \n", bufferReception);
-		writeMsg(&usart2comm, bufferData);
+		sprintf(bufferData, "Comando no reconocido\n\r");
+		writeMsg(&usart1comm, bufferData);
+
 
 	}
 
