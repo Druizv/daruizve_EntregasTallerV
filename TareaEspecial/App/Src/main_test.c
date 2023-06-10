@@ -9,6 +9,7 @@
 #include "BasicTimer.h"
 #include "ExtiDriver.h"
 #include "USARTxDriver.h"
+#include "PllDriver.h"
 
 
 //Definicion de handlers
@@ -25,6 +26,7 @@ GPIO_Handler_t handlerPinRX = {0};
 USART_Handler_t usart2Comm = {0};
 uint8_t sendMsg = 0;
 uint8_t usart2DataReceived = 0;
+PLL_Handler_t handlerpll  = {0};
 
 char bufferMsg[64] = {0};
 
@@ -66,10 +68,12 @@ int main(void){
 
 //Funcion que configura el hardware, timers y extis
 void init_Hardware(void){
+	handlerpll.clkSpeed = FREQUENCY_16MHz;
+	configPLL(&handlerpll);
 
 	//Configuracion del BLinky
-	handlerBlinkyPin.pGPIOx											= GPIOA;
-	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber					= PIN_5;
+	handlerBlinkyPin.pGPIOx											= GPIOH;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber					= PIN_1;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode					= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed					= GPIO_OSPEED_FAST;
@@ -82,6 +86,17 @@ void init_Hardware(void){
 	handlerUserButton.GPIO_PinConfig.GPIO_PinPuPdControl			= GPIO_PUPDR_NOTHING;
 	GPIO_Config(&handlerUserButton);
 
+	handlerPinTX.pGPIOx = GPIOA;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber           = PIN_9;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinMode             = GPIO_MODE_ALTFN;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode       = AF7;
+	GPIO_Config(&handlerPinTX);
+	//PINRX del usart para Usart6(PA12 AF8) Para Usart2(PA3 AF7)
+	handlerPinRX.pGPIOx = GPIOA;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber           = PIN_10;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinMode             = GPIO_MODE_ALTFN;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode       = AF7;
+	GPIO_Config(&handlerPinRX);
 /* ==================================== Configurando los TIMERS =============================================*/
 	//Configurando el TIM2 el cual le da la tasa de encendido al LED
 	handlerBlinkyTimer.ptrTIMx										= TIM2;
@@ -96,18 +111,18 @@ void init_Hardware(void){
 	extInt_Config(&handlerUserButtonExti);
 /* ==================================== Configurando los USART =============================================*/
 	handlerPinTX.pGPIOx												= GPIOA;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber						= PIN_2;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber						= PIN_9;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode					= AF7;
 	GPIO_Config(&handlerPinTX);
 
 	handlerPinRX.pGPIOx												= GPIOA;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber						= PIN_3;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber						= PIN_10;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode					= AF7;
 	GPIO_Config(&handlerPinRX);
 
-	usart2Comm.ptrUSARTx											= USART2;
+	usart2Comm.ptrUSARTx											= USART1;
 	usart2Comm.USART_Config.USART_baudrate							= USART_BAUDRATE_115200;
 	usart2Comm.USART_Config.USART_datasize							= USART_DATASIZE_8BIT;
 	usart2Comm.USART_Config.USART_parity							= USART_PARITY_NONE;
@@ -135,7 +150,7 @@ void callback_extInt13(void){
  * por el puerto USART2
  */
 
-void usart2Rx_Callback(void){
+void usart1Rx_Callback(void){
 
 	usart2DataReceived = getRxData();
 

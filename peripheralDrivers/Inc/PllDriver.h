@@ -13,7 +13,7 @@
 
 #define FREQUENCY_16MHz		0
 #define FREQUENCY_80MHz		1
-
+#define FREQUENCY_100MHz	2
 
 
 typedef struct{
