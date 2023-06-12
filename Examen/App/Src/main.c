@@ -29,11 +29,9 @@
 #include "arm_math.h"
 #include <math.h>
 
-#define ACCEL_ADDRESS          	 0x2D
-#define ACCEL_XOUT_L             50     //DATAX0
-#define ACCEL_XOUT_H             51     //DATAX1
-#define ACCEL_YOUT_L             52     //DATAYO
-#define ACCEL_YOUT_H             53     //DATAY1
+#define ACCEL_ADDRESS          	 0x1D
+#define POWER_CTL                45
+
 #define ACCEL_ZOUT_L             54     //DATAZ0
 #define ACCEL_ZOUT_H             55     //DATAZ1
 
@@ -50,7 +48,7 @@ PLL_Handler_t handlerPll = {0};
 
 
 BasicTimer_Handler_t handlerBlinkyTimer	= {0};  //TIM2
-BasicTimer_Handler_t handler1KHzTimer   = {0};     //TIM4
+BasicTimer_Handler_t handlerSampleTimer   = {0};     //TIM4
 
 uint8_t rxData				 = 0;
 char    bufferReception[64]  = {0};
@@ -59,11 +57,11 @@ char   	bufferData [64]  = {0};
 
 //muestreo
 uint8_t flagSample = 0;
-uint8_t numberSample = 0;
-uint8_t usart2DataReceived = 0;
-float arrrayx[256]                     ={0};
-float arrrayY[256]                     ={0};
-float arrrayZ[256]                     ={0};
+uint16_t numberSample = 0;
+uint8_t usart1DataReceived = 0;
+
+float arrayZ[500]         ={0};
+uint16_t fftSize 		   = 500;
 
 //MCO1
 pll_MCO1 handlerMCO1 = {0};
@@ -90,7 +88,6 @@ I2C_Handler_t handlerAccelerometer = {0};
 PLL_Handler_t handlerpll  = {0};
 GPIO_Handler_t handlerCLK = {0};
 
-uint8_t flagample 		={0};
 
 //Parametros
 unsigned int 	firstParameter = 0;
@@ -107,12 +104,33 @@ BasicTimer_Handler_t  handlerADC = {0};
 uint8_t 	  flagADC		  = 0;
 
 //callback ADC
-uint8_t contador = 0;
-int16_t coordinates[2] = {0};
+uint8_t counter2 = 0;
+int16_t coord[2] = {0};
+
+//FFT
+//float transformedSignal[500]  = {0};
+uint32_t ifftFlag = 0;
+arm_rfft_fast_instance_f32 config_Rfft_fast_f32;
+arm_status statusInitFFT = ARM_MATH_ARGUMENT_ERROR;
+
 
 // Definicion de las cabeceras de las funciones del main
 void init_system(void);
 void parseCommands (char *ptrBufferReception);
+
+void createSignal(void);
+
+//Elementos para generar una señal
+#define SINE_DATA_SIZE    4096   			//Tamaño del arrlego de datos
+float32_t fs =  8000.0;					//Frecuencia de muestreo
+float32_t f0 =	250.0;					//Frecuencia fundamental de la señal
+float32_t dt =	0;						//Periodo de muestreo, en este caso sera (1/fs)
+float32_t stopTime = 1.0;				//Quizas no sea necesario
+float32_t amplitud = 5;					//Amplitud de la señal generada
+float32_t sineSignal[SINE_DATA_SIZE];
+float32_t transformedSignal[SINE_DATA_SIZE];
+float32_t* ptrSineSingal;
+
 
 
 int main(void){
@@ -183,12 +201,12 @@ void init_system(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable				= BTIMER_INTERRUPT_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
 
-	handler1KHzTimer.ptrTIMx                              = TIM4;
-	handler1KHzTimer.TIMx_Config.TIMx_mode                = BTIMER_MODE_UP ;
-	handler1KHzTimer.TIMx_Config.TIMx_speed               = BTIMER_SPEED_100MHz_100us;
-	handler1KHzTimer.TIMx_Config.TIMx_period              = 10;
-	handler1KHzTimer.TIMx_Config.TIMx_interruptEnable     = BTIMER_INTERRUPT_ENABLE;
-	BasicTimer_Config(&handler1KHzTimer);
+	handlerSampleTimer.ptrTIMx                             				= TIM4;
+	handlerSampleTimer.TIMx_Config.TIMx_mode                			= BTIMER_MODE_UP ;
+	handlerSampleTimer.TIMx_Config.TIMx_speed               			= BTIMER_SPEED_100MHz_100us;
+	handlerSampleTimer.TIMx_Config.TIMx_period              			= 50;
+	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable     			= BTIMER_INTERRUPT_ENABLE;
+	BasicTimer_Config(&handlerSampleTimer);
 
 
 /* ==================================== Configurando los EXTI =============================================*/
@@ -253,14 +271,14 @@ void init_system(void){
 
 /*======================================== ADC =============================================*/
 
-	adcConfig.channels[0]  	 	= ADC_CHANNEL_0;
-	adcConfig.channels[1]   	= ADC_CHANNEL_1;
-	adcConfig.dataAlignment     = ADC_ALIGNMENT_RIGHT;
-	adcConfig.resolution        = ADC_RESOLUTION_12_BIT;
-	adcConfig.samplingPeriod    = ADC_SAMPLING_PERIOD_28_CYCLES;
-
-	//Se carga la configuracion multichannel
-	ADC_ConfigMultichannel(&adcConfig, 2);
+//	adcConfig.channels[0]  	 	= ADC_CHANNEL_0;
+//	adcConfig.channels[1]   	= ADC_CHANNEL_1;
+//	adcConfig.dataAlignment     = ADC_ALIGNMENT_RIGHT;
+//	adcConfig.resolution        = ADC_RESOLUTION_12_BIT;
+//	adcConfig.samplingPeriod    = ADC_SAMPLING_PERIOD_28_CYCLES;
+//
+//	//Se carga la configuracion multichannel
+//	ADC_ConfigMultichannel(&adcConfig, 2);
 
 
 /*  ====================================== PWM =============================================*/
@@ -277,6 +295,17 @@ void BasicTimer2_Callback(void){
 	GPIOxTogglePin(&handlerBlinkyPin);
 	counter++;
 }
+
+//void BasicTimer4_Callback(void) {
+//    if (flagSample == 1 && numberSample < 256) {
+//        uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
+//        uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
+//        int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
+//        arrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
+//        numberSample++;
+//    }
+//}
+
 
 void BasicTimer4_Callback(void){
 	if(flagSample == 1){
@@ -299,27 +328,41 @@ void usart1Rx_Callback(void){
 
 }
 
+void createSignal(void){
+
+	/*Esta es la señal creada en Matlab
+	 * sineSignal = amplitud * sin(2*pi*f0*t);
+	 */
+	//Creando la señal necesitamos el periodo dt
+	dt = 1/fs;
+
+	//LLenamos el arreglo con la señal seno
+	for(int i = 0; i < SINE_DATA_SIZE; i++){
+		sineSignal[i] = amplitud * arm_sin_f32(2*M_PI*f0*(dt*i));
+	}
+}
+
+
 /*Esta función se ejecuta luego de una conversión ADC
  * (es llamada por la ISR de la conversión ADC)
  */
-void adcComplete_Callback(void){
-	// Tomamos el valor de la conversión ADC realizada con getADC(),
-	// se almacena en un arreglo ambos valores y se controla el orden por medio de un contador
-	if(contador){
-		adcData = (getADC()-2045)*(-1);
-		contador = 0;
-		coordinates[1]=adcData;
-	}else{
-		contador = 1;
-		adcData = getADC()-2045;
-		coordinates[0]=adcData;
-	}
+//void adcComplete_Callback(void){
+//	// Tomamos el valor de la conversión ADC realizada con getADC(),
+//	// se almacena en un arreglo ambos valores y se controla el orden por medio de un counter2
+//	if(counter2){
+//		adcData = (getADC()-2045)*(-1);
+//		counter2 = 0;
+//		coord[1]=adcData;
+//	}else{
+//		counter2 = 1;
+//		adcData = getADC()-2045;
+//		coord[0]=adcData;
+//	}
+//}
+void BasicTimer3_Callback(void){
+
+	usart1DataReceived = getRxData();
 }
-/*void BasicTimer3_Callback(void){
-
-	usart2DataReceived = getRxData();
-
-}*/
 
 // funcion que administra las entradas por consola del PC
 void parseCommands (char *ptrBufferReception){
@@ -340,10 +383,10 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "5) getTime # ---- read current hour #(us) \n");
 		writeMsg(&usart1comm, "6) setDate #Day #Month Year ---- set the date \n");
 		writeMsg(&usart1comm, "7) getDate ---- read date current date\n");
-		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
+		writeMsg(&usart1comm, "8) setADCss ---- configurar la velocidad de muestreo \n");
 		writeMsg(&usart1comm, "9) getADCData ---- muestra el arreglo de datos \n");
 		writeMsg(&usart1comm, "10) setAcc ---- captura datos del acelerometro \n");
-		writeMsg(&usart1comm, "11) getDataFFT ---- presenta la frecuencia del acelerometro FFT\n");
+		writeMsg(&usart1comm, "11) getFFT ---- presenta la frecuencia del acelerometro FFT\n");
 
 	} else if (strcmp(cmd, "setMCO") == 0) {
 		/*
@@ -451,44 +494,93 @@ void parseCommands (char *ptrBufferReception){
 		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 
 	}
-//
-//	else if (strcmp(cmd, "setAcc")){
-//		flagSample = 1;
-//		numberSample = 0;
-//		while (numberSample < 256) {
-//			uint8_t AccelX_low = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_XOUT_L);
-//			uint8_t AccelX_high = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_XOUT_H);
-//			int16_t AccelX = AccelX_high << 8 | AccelX_low;
-//
-//			uint8_t AccelY_low = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_YOUT_L);
-//			uint8_t AccelY_high = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_YOUT_H);
-//			int16_t AccelY = AccelY_high << 8 | AccelY_low;
-//
-//			uint8_t AccelZ_low = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_ZOUT_L);
-//			uint8_t AccelZ_high = i2c_readSingleRegister(
-//					&handlerAccelerometer, ACCEL_ZOUT_H);
-//			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
-//
-//			arrrayx[numberSample] = (AccelX / 256.f) * 9.78;
-//			arrrayY[numberSample] = (AccelY / 256.f) * 9.78;
-//			arrrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
-//
-//		}
-//		flagSample = 0;
-//		numberSample = 0;
-//		for (int i = 0; i < 256; i++) {
-//			sprintf(bufferData,
-//					"X = %.2f  ;  Y = %.2f  ;  Z = %.2f   | %u \n",
-//					arrrayx[i], arrrayY[i], arrrayZ[i], i);
-//			writeMsg(&usart1comm, bufferData);
-//		}
+	else if (strcmp(cmd, "setAcc") == 0){
+		flagSample = 1;
+		numberSample = 0;
+		//numberSample++;
+		while (numberSample < 500) {
+			uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
+			uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
+			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
 
-//	}
+			arrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
+
+		}
+
+		flagSample = 0;
+		numberSample = 0;
+
+		for (int i = 0; i < 500; i++) {
+			sprintf(bufferData, "Z = %.4f   | %u \n", arrayZ[i], i);
+			writeMsg(&usart1comm, bufferData);
+		}
+
+	}
+
+	else if(strcmp(cmd, "setz") == 0){
+		sprintf(bufferData, "Axis Z data (r)\n");
+		writeMsg(&usart1comm, bufferData);
+		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
+		uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
+		uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
+		int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
+		sprintf(bufferData, "AccelZ = %.2f \n",  (AccelZ/256.f)*9.78);
+		writeMsg(&usart1comm, bufferData);
+		rxData = '\0';
+	}
+	else if (strcmp(cmd, "resetz") == 0){
+		sprintf(bufferData, "\nreset axie(z)\n");
+		writeMsg(&usart1comm, bufferData);
+
+		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
+		rxData = '\0';
+	}
+
+	else if (strcmp(cmd,"getFFT") == 0){
+		statusInitFFT = arm_rfft_fast_init_f32(&config_Rfft_fast_f32, fftSize);
+		int j = 0;
+		int k = 0;
+
+		if(statusInitFFT == ARM_MATH_SUCCESS){
+			sprintf(bufferData, "Initialization.... SUCESS!\n");
+			writeMsg(&usart1comm, bufferData);
+
+			arm_rfft_fast_f32(&config_Rfft_fast_f32,arrayZ, transformedSignal, ifftFlag);
+			arm_abs_f32(transformedSignal, arrayZ, fftSize);
+
+		}
+
+			for( j = 1; j < fftSize; j++){
+				if(j % 2){
+					sprintf(bufferData, "%u ; %#.6f\n", k, 2*arrayZ[j]);
+					writeMsg(&usart1comm, bufferData);
+					k++;
+				}
+			}
+
+	}
+	else if (strcmp(cmd,"seno") == 0){
+
+		createSignal();
+		sprintf(bufferData, "Creando la seña.. \n");
+		writeMsg(&usart1comm, bufferData);
+	}
+	else if (strcmp(cmd,"aver")== 0){
+
+		stopTime = 0.0;
+		int i	 = 0;
+
+		sprintf(bufferData, "Signal values Time - sine\n");
+		writeMsg(&usart1comm, bufferData);
+
+		while(stopTime < 0.01){
+			stopTime = dt*i;
+			i++;
+			sprintf(bufferData, "%#.5f ; %#.6f\n", stopTime, sineSignal[i]);
+			writeMsg(&usart1comm, bufferData);
+		}
+	}
+
 	else{
 		sprintf(bufferData, "Comando no reconocido\n\r");
 		writeMsg(&usart1comm, bufferData);
