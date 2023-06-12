@@ -327,8 +327,8 @@ void parseCommands (char *ptrBufferReception){
 	// y almacena en tres elementos diferentes: Un string llamado 'cmd', y dos números
 	// integer llamados 'firstParameter' y 'secondparameter', de esta forma, es posible
 	// introducir información al micro desde el puerto serial.
-	sscanf(ptrBufferReception, "%s %u %u %s", cmd, &firstParameter,
-			&secondParameter, userMsg);
+	sscanf(ptrBufferReception, "%s %u %u %u %s", cmd, &firstParameter,
+			&secondParameter,&thirdParameter, userMsg);
 	// Este primer comando imprime una lista con los otros comandos que tiene el equipo.
 	if (strcmp(cmd, "help") == 0) {
 		writeMsg(&usart1comm, "\n");
@@ -418,7 +418,7 @@ void parseCommands (char *ptrBufferReception){
 			handlerRTC.RTC_Config.RTC_Year = (unsigned int) thirdParameter;
 			RTC_Config(&handlerRTC);
 			sprintf(bufferData, "la fecha es %u/%u/%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
-			sprintf(bufferData, "\nSe actualizo la fecha \n\rdia:%u  mes:%u  año:%u\n", firstParameter, secondParameter, thirdParameter);
+			sprintf(bufferData, "\nSe actualizo la fecha \n\rdia:%u  mes:%u  año:%u\n", firstParameter, secondParameter, thirdParameter+2000);
 
 		}
 
@@ -446,7 +446,7 @@ void parseCommands (char *ptrBufferReception){
 		day 	= date[4];
 		month 	= date[5];
 		year 	= date[6];
-		sprintf(bufferData, "\n\rLa fecha actual es: \n\rlas %u:%u:%u\n\r", (unsigned int) hours, mins, secs);
+		sprintf(bufferData, "\n\rLa hora actual es: \n\rlas %u:%u:%u\n\r", (unsigned int) hours, mins, secs);
 		writeMsg(&usart1comm, bufferData);
 		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 

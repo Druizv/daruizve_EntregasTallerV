@@ -115,9 +115,9 @@ void *read_date(void){
 	 //corre el registro 8 posiciones
 	 RTC_Seconds = RTC_BcdToByte((RTC_Time  & 0x7F));
 
-	  RTC_year   = RTC_BcdToByte(((RTC_Date & 0xFF0000) >> 16));
-	  RTC_Month  = RTC_BcdToByte(((RTC_Date & 0x1F00)   >> 8));
-	  RTC_Day    = RTC_BcdToByte((RTC_Date  & 0x3F));
+	 RTC_year   = RTC_BcdToByte(((RTC_Date & 0xFF0000) >> 16));
+	 RTC_Month  = RTC_BcdToByte(((RTC_Date & 0x1F00)   >> 8));
+	 RTC_Day    = RTC_BcdToByte((RTC_Date  & 0x3F));
 
 
 	calendario[0] = RTC_Seconds;
