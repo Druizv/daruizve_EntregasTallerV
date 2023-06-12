@@ -45,6 +45,9 @@
 #define ADC_SAMPLING_PERIOD_144_CYCLES	0b110;
 #define ADC_SAMPLING_PERIOD_480_CYCLES	0b111;
 
+#define ADC_EXT_ENABLE	1
+#define ADC_EXT_DISABLE	0
+
 typedef struct
 {
 	uint8_t		channel;		// Canal ADC que será utilizado para la conversión ADC
@@ -52,6 +55,10 @@ typedef struct
 	uint16_t	samplingPeriod;	// Tiempo deseado para hacer la adquisición del dato
 	uint8_t		dataAlignment;	// Alineación a la izquierda o a la derecha
 	uint16_t	adcData;			//Dato de la conversión
+	uint8_t 	adcExternal;	// Activa o desactiva el evento del EXTI11
+	uint8_t		adcExtEvent;	// Qué evento queremos activar
+	uint8_t 	channels[];		// Arreglo que almacenará los datos en caso de multichannel
+
 }ADC_Config_t;
 
 void adc_Config(ADC_Config_t *adcConfig);
@@ -60,7 +67,6 @@ void adcComplete_Callback(void);
 void startSingleADC(void);
 void startContinousADC(void);
 uint16_t getADC(void);
-
-//void ADC_ConfigMultichannel (ADC_Config_t *adcConfig, uint8_t numeroDeCanales);
+void ADC_ConfigMultichannel (ADC_Config_t *adcConfig, uint8_t numeroDeCanales);
 
 #endif /* INC_ADCDRIVER_H_ */

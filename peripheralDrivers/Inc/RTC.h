@@ -23,12 +23,9 @@ uint16_t RTC_Hours; //Configuración de las horas
 uint16_t RTC_Minutes; //Configuración de los minutos
 uint16_t RTC_Seconds; //Configuración de los segundos
 uint16_t RTC_Year; //Configuración del año
-uint16_t RTC_WeekDay; //Configuración del día de la semana
-uint16_t RTC_TimeFormat; // Configuración del formato
-uint16_t RTC_TimeNotation; //Configuración de la notación
 uint16_t RTC_Month; //Configuración del mes
-uint16_t RTC_ValueDay; //Configuración valor día
-
+uint16_t RTC_ValueDay; //configuracion del dia
+uint16_t RTC_TimeNotation; //Formato AM/PM
 }RTC_Config_t;
 
 typedef struct{

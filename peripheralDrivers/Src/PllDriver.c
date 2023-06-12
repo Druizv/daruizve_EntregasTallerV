@@ -255,8 +255,8 @@ void MCOConfig (pll_MCO1 *ptrPLL_Handler){
 	}
 
 	else if (ptrPLL_Handler->clk == LSE){
-		RCC->CFGR &= ~RCC_CFGR_MCO1_0;
-		RCC->CFGR |= RCC_CFGR_MCO1_1;
+		RCC->CFGR |= RCC_CFGR_MCO1_0;
+		RCC->CFGR &= ~RCC_CFGR_MCO1_1;
 
 		if (ptrPLL_Handler->presc == presc1) {
 

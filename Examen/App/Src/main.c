@@ -24,9 +24,18 @@
 #include "LCDDriver.h"
 #include "PwmDriver.h"
 #include "RTC.h"
+#include "AdcDriver.h"
 
 #include "arm_math.h"
 #include <math.h>
+
+#define ACCEL_ADDRESS          	 0x2D
+#define ACCEL_XOUT_L             50     //DATAX0
+#define ACCEL_XOUT_H             51     //DATAX1
+#define ACCEL_YOUT_L             52     //DATAYO
+#define ACCEL_YOUT_H             53     //DATAY1
+#define ACCEL_ZOUT_L             54     //DATAZ0
+#define ACCEL_ZOUT_H             55     //DATAZ1
 
 //Blinky
 GPIO_Handler_t handlerBlinkyPin = {0};	//PH1
@@ -52,6 +61,9 @@ char   	bufferData [64]  = {0};
 uint8_t flagSample = 0;
 uint8_t numberSample = 0;
 uint8_t usart2DataReceived = 0;
+float arrrayx[256]                     ={0};
+float arrrayY[256]                     ={0};
+float arrrayZ[256]                     ={0};
 
 //MCO1
 pll_MCO1 handlerMCO1 = {0};
@@ -78,12 +90,25 @@ I2C_Handler_t handlerAccelerometer = {0};
 PLL_Handler_t handlerpll  = {0};
 GPIO_Handler_t handlerCLK = {0};
 
+uint8_t flagample 		={0};
+
 //Parametros
 unsigned int 	firstParameter = 0;
 unsigned int 	secondParameter = 0;
 unsigned int	thirdParameter = 0;
 char 			userMsg[64] = {0};
 char 			cmd[64]; // ayuda para analizar comandos
+
+//Elementos necesarios para configurar el ADC
+ADC_Config_t  adcConfig       = {0};
+int16_t       adcData         = 0;
+bool          adcComplete  	  = false;
+BasicTimer_Handler_t  handlerADC = {0};
+uint8_t 	  flagADC		  = 0;
+
+//callback ADC
+uint8_t contador = 0;
+int16_t coordinates[2] = {0};
 
 // Definicion de las cabeceras de las funciones del main
 void init_system(void);
@@ -226,6 +251,18 @@ void init_system(void){
 	handlerCLK.GPIO_PinConfig.GPIO_PinAltFunMode = AF0;
 	GPIO_Config(&handlerCLK);
 
+/*======================================== ADC =============================================*/
+
+	adcConfig.channels[0]  	 	= ADC_CHANNEL_0;
+	adcConfig.channels[1]   	= ADC_CHANNEL_1;
+	adcConfig.dataAlignment     = ADC_ALIGNMENT_RIGHT;
+	adcConfig.resolution        = ADC_RESOLUTION_12_BIT;
+	adcConfig.samplingPeriod    = ADC_SAMPLING_PERIOD_28_CYCLES;
+
+	//Se carga la configuracion multichannel
+	ADC_ConfigMultichannel(&adcConfig, 2);
+
+
 /*  ====================================== PWM =============================================*/
 
 //	handlerLCD.ptrI2Cx                            			= I2C2;
@@ -262,6 +299,22 @@ void usart1Rx_Callback(void){
 
 }
 
+/*Esta función se ejecuta luego de una conversión ADC
+ * (es llamada por la ISR de la conversión ADC)
+ */
+void adcComplete_Callback(void){
+	// Tomamos el valor de la conversión ADC realizada con getADC(),
+	// se almacena en un arreglo ambos valores y se controla el orden por medio de un contador
+	if(contador){
+		adcData = (getADC()-2045)*(-1);
+		contador = 0;
+		coordinates[1]=adcData;
+	}else{
+		contador = 1;
+		adcData = getADC()-2045;
+		coordinates[0]=adcData;
+	}
+}
 /*void BasicTimer3_Callback(void){
 
 	usart2DataReceived = getRxData();
@@ -276,9 +329,6 @@ void parseCommands (char *ptrBufferReception){
 	// introducir información al micro desde el puerto serial.
 	sscanf(ptrBufferReception, "%s %u %u %s", cmd, &firstParameter,
 			&secondParameter, userMsg);
-//	if (!firstParameter && firstParameter != 0) {
-//		sscanf(ptrBufferReception, "%s %s", cmd, userMsg);
-//	}
 	// Este primer comando imprime una lista con los otros comandos que tiene el equipo.
 	if (strcmp(cmd, "help") == 0) {
 		writeMsg(&usart1comm, "\n");
@@ -292,7 +342,7 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "7) getDate ---- read date current date\n");
 		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
 		writeMsg(&usart1comm, "9) getADCData ---- muestra el arreglo de datos \n");
-		writeMsg(&usart1comm, "10) setDataAcc ---- captura datos del acelerometro \n");
+		writeMsg(&usart1comm, "10) setAcc ---- captura datos del acelerometro \n");
 		writeMsg(&usart1comm, "11) getDataFFT ---- presenta la frecuencia del acelerometro FFT\n");
 
 	} else if (strcmp(cmd, "setMCO") == 0) {
@@ -320,7 +370,6 @@ void parseCommands (char *ptrBufferReception){
 			sprintf(bufferData, "Se habilita el reloj PLL");
 			writeMsg(&usart1comm, bufferData);
 		}
-
 
 
 	} else if (strcmp(cmd, "setMCOPre") == 0) {
@@ -358,39 +407,88 @@ void parseCommands (char *ptrBufferReception){
 
 
 	} else if (strcmp(cmd, "setDate") == 0) {
-		writeMsg(&usart1comm, bufferData);
-		handlerRTC.RTC_Config.RTC_ValueDay = (unsigned int) firstParameter;
-		handlerRTC.RTC_Config.RTC_Month = (unsigned int) secondParameter;
-		handlerRTC.RTC_Config.RTC_Year = (unsigned int) thirdParameter;
-		RTC_Config(&handlerRTC);
+		if (firstParameter > 30 || secondParameter > 12 || thirdParameter > 99){
+			sprintf(bufferData, "Fuera de rango");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else{
+			writeMsg(&usart1comm, bufferData);
+			handlerRTC.RTC_Config.RTC_ValueDay = (unsigned int) firstParameter;
+			handlerRTC.RTC_Config.RTC_Month = (unsigned int) secondParameter;
+			handlerRTC.RTC_Config.RTC_Year = (unsigned int) thirdParameter;
+			RTC_Config(&handlerRTC);
+			sprintf(bufferData, "la fecha es %u/%u/%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
+			sprintf(bufferData, "\nSe actualizo la fecha \n\rdia:%u  mes:%u  año:%u\n", firstParameter, secondParameter, thirdParameter);
 
-		sprintf(bufferData, "la fecha es %u/%u/%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
-		sprintf(bufferData, "\n\rSe actualizo la fecha \n\rdia:%u  mes:%u  ano:%u\n\r", (unsigned int) firstParameter, secondParameter,thirdParameter + 2000);
+		}
 
 	} else if (strcmp(cmd, "setTime") == 0) {
-		handlerRTC.RTC_Config.RTC_Hours = (unsigned int) firstParameter;
-		handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) secondParameter;
-		handlerRTC.RTC_Config.RTC_Seconds = (unsigned int) thirdParameter;
-		RTC_Config(&handlerRTC);
-		sprintf(bufferData, "la hora es %u:%u:%u", (unsigned int) firstParameter, secondParameter, thirdParameter);
-		sprintf(bufferData, "\n\rSe actualizo la hora \n\rhora:%u  minuto:%u  segundo:%u\n\r", (unsigned int) firstParameter, secondParameter, thirdParameter + 2000);
-		writeMsg(&usart1comm, bufferData);
+		if(firstParameter > 12 || secondParameter >59 || thirdParameter > 59){
+			sprintf(bufferData, "Fuera de rango");
+			writeMsg(&usart1comm, bufferData);
+		}
+		else{
+			handlerRTC.RTC_Config.RTC_Hours = (unsigned int) firstParameter;
+			handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) secondParameter;
+			handlerRTC.RTC_Config.RTC_Seconds = (unsigned int) thirdParameter;
+			RTC_Config(&handlerRTC);
+			sprintf(bufferData, "la hora es %u:%u:%u",(unsigned int) firstParameter, secondParameter, thirdParameter + 2000);
+			sprintf(bufferData, "\n\rSe actualizo la hora \n\rhora:%u  minuto:%u  segundo:%u\n\r", firstParameter, secondParameter, thirdParameter);
+			writeMsg(&usart1comm, bufferData);
+		}
+
 
 	} else if (strcmp(cmd, "getTime") == 0) {
-		date = read_date();
-		secs = date[0];
-		mins = date[1];
-		hours = date[2];
-		day = date[4];
-		month = date[5];
-		year = date[6];
-		sprintf(bufferData, "\n\rLa fecha actual es: \n\rlas %u:%u:%u del %u/%u/%u\n\r", (unsigned int) hours, mins, secs, day, month, year);
+		date 	= read_date();
+		secs 	= date[0];
+		mins 	= date[1];
+		hours 	= date[2];
+		day 	= date[4];
+		month 	= date[5];
+		year 	= date[6];
+		sprintf(bufferData, "\n\rLa fecha actual es: \n\rlas %u:%u:%u\n\r", (unsigned int) hours, mins, secs);
 		writeMsg(&usart1comm, bufferData);
-		sprintf(bufferData, "%u/%u/%u", (unsigned int) day, month, year);
 		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 
 	}
+//
+//	else if (strcmp(cmd, "setAcc")){
+//		flagSample = 1;
+//		numberSample = 0;
+//		while (numberSample < 256) {
+//			uint8_t AccelX_low = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_XOUT_L);
+//			uint8_t AccelX_high = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_XOUT_H);
+//			int16_t AccelX = AccelX_high << 8 | AccelX_low;
+//
+//			uint8_t AccelY_low = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_YOUT_L);
+//			uint8_t AccelY_high = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_YOUT_H);
+//			int16_t AccelY = AccelY_high << 8 | AccelY_low;
+//
+//			uint8_t AccelZ_low = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_ZOUT_L);
+//			uint8_t AccelZ_high = i2c_readSingleRegister(
+//					&handlerAccelerometer, ACCEL_ZOUT_H);
+//			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
+//
+//			arrrayx[numberSample] = (AccelX / 256.f) * 9.78;
+//			arrrayY[numberSample] = (AccelY / 256.f) * 9.78;
+//			arrrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
+//
+//		}
+//		flagSample = 0;
+//		numberSample = 0;
+//		for (int i = 0; i < 256; i++) {
+//			sprintf(bufferData,
+//					"X = %.2f  ;  Y = %.2f  ;  Z = %.2f   | %u \n",
+//					arrrayx[i], arrrayY[i], arrrayZ[i], i);
+//			writeMsg(&usart1comm, bufferData);
+//		}
 
+//	}
 	else{
 		sprintf(bufferData, "Comando no reconocido\n\r");
 		writeMsg(&usart1comm, bufferData);
