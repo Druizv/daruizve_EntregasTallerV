@@ -152,6 +152,24 @@ int main(void){
 	init_system();
 
 	writeMsg(&usart1comm, "iniciando \n");
+	writeMsg(&usart1comm, "\n ....................................................................................................\n"
+			"\n..////////////////////////////////  ..  .  .  .. ..  .  .  .. ..  ,///////////////////////////////,.\n"
+			"\n..  .  .@@@@@@@@@@@@@@@@@@@@@@@@@@@ ..  .  .  .@ ..  @  .  .. ..  @@@@@@@@@@@@@@@@@@@@@@@@@@@  .  ..\n"
+			"\n  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@, .  ..  . @@@@@@@..  .  .  |@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  \n"
+			"\n  .  ..  .  . @@@@@@@@@@@@@@@@@@@@@@@@@@@&|, |@@@@@@@@@|, |@@@@@@@@@@@@@@@@@@@@@@@@@@@@.  ..  .  .  \n"
+			"\n..  .  .  ..  .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@,.  .  .  .  ..\n"
+			"\n..  .  .  ..  .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@,.  .  .  .  ..\n"
+			"\n..  .  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  .  ..\n"
+			"\n..  .  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  .  ..\n"
+			"\n  .  ..  .  .  . @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   .  .   .  .  \n"
+			"\n  .  ..  .  .  . (@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@).  .  ..  .  .  \n"
+			"\n                                    &@@@@@@@@@@@@@@@@@@@@@@@@@@@&.                                  \n"
+			"\n..  .  .  ..  .  .  .  ..  .  .  .  ..  ..@@@@@@@@@@@@@@@@@ . ..  .  .  .. ..  .  .  ..  .  .  .  ..\n"
+			"\n                                             @@@@@@@@@@@                                            \n"
+			"\n  .  ..  .  .  .   .  .  .  ..  .  .  .  ..  . @@@@@@@...  .  .  .  ..  .  .  .   .  .  .  ..  .  .  \n"
+			"\n  .  ..  .  .  .  ..  .  .  ..  .  .  .  ..  .  .@@@  ..  .  .  .  ..  .  .  .  ..  .  .  ..  .  .  \n"
+			"\n..  .  .  ..  .  .  .  ..  .  .  .  ..  .  .  .. .@  .  .  .. ..  .  .  .. ..  .  .  ..  .  .  .  ..\n"
+			"\n..  .  .  ..  .  .  . . . .. .. .  ..  . EL SEÑOR DE LA NOCHE.. . .. .. .. ..  .  .  ..  .  .  .  ..\n");
 	while(1){
 
 		//Se verifica constantemente si tiene una nueva entrada y de ser asi entrara en los condicionales
@@ -387,6 +405,7 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "9) getADC ---- muestra el arreglo de datos \n");
 		writeMsg(&usart1comm, "10) getAcc---- captura datos del acelerometro \n");
 		writeMsg(&usart1comm, "11) FFT ---- presenta la frecuencia del acelerometro FFT\n");
+		writeMsg(&usart1comm, "12) special ---- comando especial ya que el resto no dio bien");
 
 	} else if (strcmp(cmd, "setMCO") == 0) {
 		/*
@@ -508,7 +527,7 @@ void parseCommands (char *ptrBufferReception){
 	else if (strcmp(cmd,"getADC") == 0){
 		flagADC = 1;
 		for (int c = 0; c < 256; c++) {
-			sprintf(bufferData, "canal 1 = %.4f   | canal 2 = %.4f ; %u\n",adcDataCh1[c],adcDataCh2[c],c);
+			sprintf(bufferData, "canal 1 = %.4f   | canal 2 = %.4f | %u\n",adcDataCh1[c],adcDataCh2[c],c);
 			writeMsg(&usart1comm, bufferData);
 		}
 	}
@@ -568,28 +587,32 @@ void parseCommands (char *ptrBufferReception){
 			float32_t sampleRate = 200.0f; //frecuencia de muestreo
 			float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
 
-			sprintf(bufferData,"dominante :%.2fHz ; maximo:%f\n",dominantFreq, maximo[0]);
+			sprintf(bufferData,"dominante :%.2fHz | maximo:%f\n",dominantFreq, maximo[0]);
 			writeMsg(&usart1comm, bufferData);
 
 	}
 
-//	else if (strcmp(cmd, "freq") == 0) {
-//		// Encontrar el índice y el valor máximo en el espectro de frecuencia
-//		float32_t maximo[1] = {0};
-//		int l = 0;
-//		for(l = 1; l< fftSize; l++ ){
-//			if (transformedSignal[l]> maximo[0]){
-//				maximo[0] = transformedSignal[l];
-//			}
-//		}
-//
-//		float32_t sampleRate = 200.0f; //frecuencia de muestreo
-//		float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
-//
-//		sprintf(bufferData,"dominante :%.4f\n",dominantFreq);
-//		writeMsg(&usart1comm, bufferData);
-//
-//	}
+	else if (strcmp(cmd, "special") == 0) {
+		writeMsg(&usart1comm, "\n ....................................................................................................\n"
+				"\n..////////////////////////////////  ..  .  .  .. ..  .  .  .. ..  ,///////////////////////////////,.\n"
+				"\n..  .  .@@@@@@@@@@@@@@@@@@@@@@@@@@@ ..  .  .  .@ ..  @  .  .. ..  @@@@@@@@@@@@@@@@@@@@@@@@@@@  .  ..\n"
+				"\n  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@, .  ..  . @@@@@@@..  .  .  |@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  \n"
+				"\n  .  ..  .  . @@@@@@@@@@@@@@@@@@@@@@@@@@@&|, |@@@@@@@@@|, |@@@@@@@@@@@@@@@@@@@@@@@@@@@@.  ..  .  .  \n"
+				"\n..  .  .  ..  .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@,.  .  .  .  ..\n"
+				"\n..  .  .  ..  .@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@,.  .  .  .  ..\n"
+				"\n..  .  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  .  ..\n"
+				"\n..  .  .  ..  . )@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@(..  .  .  .  ..\n"
+				"\n  .  ..  .  .  . @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   .  .   .  .  \n"
+				"\n  .  ..  .  .  . (@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@).  .  ..  .  .  \n"
+				"\n                                    &@@@@@@@@@@@@@@@@@@@@@@@@@@@&.                                  \n"
+				"\n..  .  .  ..  .  .  .  ..  .  .  .  ..  ..@@@@@@@@@@@@@@@@@ . ..  .  .  .. ..  .  .  ..  .  .  .  ..\n"
+				"\n                                             @@@@@@@@@@@                                            \n"
+				"\n  .  ..  .  .  .   .  .  .  ..  .  .  .  ..  . @@@@@@@...  .  .  .  ..  .  .  .   .  .  .  ..  .  .  \n"
+				"\n  .  ..  .  .  .  ..  .  .  ..  .  .  .  ..  .  .@@@  ..  .  .  .  ..  .  .  .  ..  .  .  ..  .  .  \n"
+				"\n..  .  .  ..  .  .  .  ..  .  .  .  ..  .  .  .. .@  .  .  .. ..  .  .  .. ..  .  .  ..  .  .  .  ..\n"
+				"\n..  .  .  ..  .  .  . . . .. .. .  ..  . EL SEÑOR DE LA NOCHE.. . .. .. .. ..  .  .  ..  .  .  .  ..\n");
+
+	}
 
 	else{
 		sprintf(bufferData, "Comando no reconocido\n\r");
