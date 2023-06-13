@@ -37,7 +37,7 @@ float32_t maxValue;
 
 #define ACCEL_ZOUT_L             54     //DATAZ0
 #define ACCEL_ZOUT_H             55     //DATAZ1
-
+#define DATA_SIZE				 512
 //Blinky
 GPIO_Handler_t handlerBlinkyPin = {0};	//PH1
 uint8_t counter = 0;
@@ -62,9 +62,11 @@ char   	bufferData [64]  = {0};
 uint8_t flagSample = 0;
 uint16_t numberSample = 0;
 uint8_t usart1DataReceived = 0;
+uint16_t fftSize 		   = 512;
+float32_t transformedSignal[DATA_SIZE];
 
 float arrayZ[512]         ={0};
-uint16_t fftSize 		   = 512;
+
 
 //MCO1
 pll_MCO1 handlerMCO1 = {0};
@@ -101,14 +103,20 @@ char 			cmd[64]; // ayuda para analizar comandos
 
 //Elementos necesarios para configurar el ADC
 ADC_Config_t  adcConfig       = {0};
-int16_t       adcData         = 0;
 bool          adcComplete  	  = false;
 BasicTimer_Handler_t  handlerADC = {0};
 uint8_t 	  flagADC		  = 0;
 
 //callback ADC
-uint8_t counter2 = 0;
+uint8_t counterADC = 0;
+float32_t adcDataCh1[256] = {0};
+float32_t adcDataCh2[256] = {0};
+uint8_t counterData = 0;
 int16_t coord[2] = {0};
+
+
+//PWM
+PWM_Handler_t handlerPWM = {0};
 
 //FFT
 //float transformedSignal[500]  = {0};
@@ -123,16 +131,16 @@ void parseCommands (char *ptrBufferReception);
 
 void createSignal(void);
 
-//Elementos para generar una señal
-#define SINE_DATA_SIZE    4096   			//Tamaño del arrlego de datos
-float32_t fs =  8000.0;					//Frecuencia de muestreo
-float32_t f0 =	250.0;					//Frecuencia fundamental de la señal
-float32_t dt =	0;						//Periodo de muestreo, en este caso sera (1/fs)
-float32_t stopTime = 1.0;				//Quizas no sea necesario
-float32_t amplitud = 5;					//Amplitud de la señal generada
-float32_t sineSignal[SINE_DATA_SIZE];
-float32_t transformedSignal[SINE_DATA_SIZE];
-float32_t* ptrSineSingal;
+////Elementos para generar una señal
+//#define SINE_DATA_SIZE    4096   			//Tamaño del arrlego de datos
+//float32_t fs =  8000.0;					//Frecuencia de muestreo
+//float32_t f0 =	250.0;					//Frecuencia fundamental de la señal
+//float32_t dt =	0;						//Periodo de muestreo, en este caso sera (1/fs)
+//float32_t stopTime = 1.0;				//Quizas no sea necesario
+//float32_t amplitud = 5;					//Amplitud de la señal generada
+//float32_t sineSignal[SINE_DATA_SIZE];
+//float32_t transformedSignal[SINE_DATA_SIZE];
+//float32_t* ptrSineSingal;
 
 
 
@@ -269,45 +277,37 @@ void init_system(void){
 	handlerCLK.GPIO_PinConfig.GPIO_PinOPType = GPIO_OTYPE_PUSHPULL;
 	handlerCLK.GPIO_PinConfig.GPIO_PinSpeed = GPIO_OSPEED_FAST;
 	handlerCLK.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_PUPDR_NOTHING;
-	handlerCLK.GPIO_PinConfig.GPIO_PinAltFunMode = AF0;
+	handlerCLK.GPIO_PinConfig.GPIO_PinAltFunMode  = AF0;
 	GPIO_Config(&handlerCLK);
 
 /*======================================== ADC =============================================*/
 
-//	adcConfig.channels[0]  	 	= ADC_CHANNEL_0;
-//	adcConfig.channels[1]   	= ADC_CHANNEL_1;
-//	adcConfig.dataAlignment     = ADC_ALIGNMENT_RIGHT;
-//	adcConfig.resolution        = ADC_RESOLUTION_12_BIT;
-//	adcConfig.samplingPeriod    = ADC_SAMPLING_PERIOD_28_CYCLES;
-//
-//	//Se carga la configuracion multichannel
-//	ADC_ConfigMultichannel(&adcConfig, 2);
+	adcConfig.channels[0]  	 	= ADC_CHANNEL_0;
+	adcConfig.channels[1]   	= ADC_CHANNEL_1;
+	adcConfig.dataAlignment     = ADC_ALIGNMENT_RIGHT;
+	adcConfig.resolution        = ADC_RESOLUTION_12_BIT;
+	adcConfig.samplingPeriod    = ADC_SAMPLING_PERIOD_28_CYCLES;
+	adcConfig.adcData			= 11;
+	//Se carga la configuracion multichannel
+	ADC_ConfigMultichannel(&adcConfig, 2);
+
+
 
 
 /*  ====================================== PWM =============================================*/
 
-//	handlerLCD.ptrI2Cx                            			= I2C2;
-//	handlerLCD.modeI2C                            			= I2C_MODE_SM;
-//	handlerLCD.slaveAddress                       			= LCD_ADDRESS;
-//	i2c_config(&handlerLCD);
-}
+	handlerPWM.ptrTIMx											= TIM5;
+	handlerPWM.config.channel									= PWM_CHANNEL_1;
+	handlerPWM.config.duttyCicle								= PWM_DUTTY_100_PERCENT;
+	handlerPWM.config.periodo									= 220;
+	handlerPWM.config.prescaler									= 50;
 
 /* ===================== Rutinas de atencion o callbacks ===============================================*/
-
+}
 void BasicTimer2_Callback(void){
 	GPIOxTogglePin(&handlerBlinkyPin);
 	counter++;
 }
-
-//void BasicTimer4_Callback(void) {
-//    if (flagSample == 1 && numberSample < 256) {
-//        uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
-//        uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
-//        int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
-//        arrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
-//        numberSample++;
-//    }
-//}
 
 
 void BasicTimer4_Callback(void){
@@ -331,37 +331,34 @@ void usart1Rx_Callback(void){
 
 }
 
-void createSignal(void){
-
-	/*Esta es la señal creada en Matlab
-	 * sineSignal = amplitud * sin(2*pi*f0*t);
-	 */
-	//Creando la señal necesitamos el periodo dt
-	dt = 1/fs;
-
-	//LLenamos el arreglo con la señal seno
-	for(int i = 0; i < SINE_DATA_SIZE; i++){
-		sineSignal[i] = amplitud * arm_sin_f32(2*M_PI*f0*(dt*i));
-	}
-}
 
 
 /*Esta función se ejecuta luego de una conversión ADC
  * (es llamada por la ISR de la conversión ADC)
  */
-//void adcComplete_Callback(void){
-//	// Tomamos el valor de la conversión ADC realizada con getADC(),
-//	// se almacena en un arreglo ambos valores y se controla el orden por medio de un counter2
-//	if(counter2){
-//		adcData = (getADC()-2045)*(-1);
-//		counter2 = 0;
-//		coord[1]=adcData;
-//	}else{
-//		counter2 = 1;
-//		adcData = getADC()-2045;
-//		coord[0]=adcData;
-//	}
-//}
+void adcComplete_Callback(void){
+	// Tomamos el valor de la conversión ADC realizada con getADC(),
+	// se almacena en un arreglo ambos valores y se controla el orden por medio de un counter2
+	if (flagADC){
+		if(counterADC == 0){
+			adcDataCh1[counterData] = (float) getADC();
+		}
+		else{
+			adcDataCh2[counterData] = (float) getADC();
+			counterData++;
+		}
+		counterADC++;
+		if(counterData > 256){
+			counterData = 0;
+			flagADC = 0;
+		}
+		if(counterADC == 2){
+			counterADC = 0;
+		}
+	}
+
+
+}
 void BasicTimer3_Callback(void){
 
 	usart1DataReceived = getRxData();
@@ -386,8 +383,8 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "5) getTime  ---- Pesenta la hora actual \n");
 		writeMsg(&usart1comm, "6) setDate #DD #MM YY ---- congigura la fecha \n");
 		writeMsg(&usart1comm, "7) getDate ---- Presenta la fecha actual\n");
-		writeMsg(&usart1comm, "8) setADCss ---- configurar la velocidad de muestreo \n");
-		writeMsg(&usart1comm, "9) getADCData ---- muestra el arreglo de datos \n");
+		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
+		writeMsg(&usart1comm, "9) getADC ---- muestra el arreglo de datos \n");
 		writeMsg(&usart1comm, "10) getAcc---- captura datos del acelerometro \n");
 		writeMsg(&usart1comm, "11) FFT ---- presenta la frecuencia del acelerometro FFT\n");
 
@@ -418,7 +415,8 @@ void parseCommands (char *ptrBufferReception){
 		}
 
 
-	} else if (strcmp(cmd, "setMCOPre") == 0) {
+	}
+	else if (strcmp(cmd, "setMCOPre") == 0) {
 		if (firstParameter == 1){
 			handlerMCO1.presc = presc1;
 			MCOConfig(&handlerMCO1);
@@ -452,7 +450,35 @@ void parseCommands (char *ptrBufferReception){
 
 
 
-	} else if (strcmp(cmd, "setDate") == 0) {
+	}
+	else if (strcmp(cmd, "setTime") == 0) {
+			if(firstParameter > 12 || secondParameter >59 || thirdParameter > 59){
+				sprintf(bufferData, "Fuera de rango");
+				writeMsg(&usart1comm, bufferData);
+			}
+			else{
+				handlerRTC.RTC_Config.RTC_Hours = (unsigned int) firstParameter;
+				handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) secondParameter;
+				handlerRTC.RTC_Config.RTC_Seconds = (unsigned int) thirdParameter;
+				RTC_Config(&handlerRTC);
+				sprintf(bufferData, "la hora es %u:%u:%u",(unsigned int) firstParameter, secondParameter, thirdParameter + 2000);
+				sprintf(bufferData, "\n\rSe actualizo la hora \n\rhora:%u  minuto:%u  segundo:%u\n\r", firstParameter, secondParameter, thirdParameter);
+				writeMsg(&usart1comm, bufferData);
+			}
+
+
+		}
+	else if (strcmp(cmd, "getTime") == 0) {
+			date 	= read_date();
+			secs 	= date[0];
+			mins 	= date[1];
+			hours 	= date[2];
+			sprintf(bufferData, "\n\rLa hora actual es: \n\rlas %u:%u:%u\n\r", (unsigned int) hours, mins, secs);
+			writeMsg(&usart1comm, bufferData);
+			sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
+
+		}
+	else if (strcmp(cmd, "setDate") == 0) {
 		if (firstParameter > 30 || secondParameter > 12 || thirdParameter > 99){
 			sprintf(bufferData, "Fuera de rango");
 			writeMsg(&usart1comm, bufferData);
@@ -468,35 +494,25 @@ void parseCommands (char *ptrBufferReception){
 
 		}
 
-	} else if (strcmp(cmd, "setTime") == 0) {
-		if(firstParameter > 12 || secondParameter >59 || thirdParameter > 59){
-			sprintf(bufferData, "Fuera de rango");
-			writeMsg(&usart1comm, bufferData);
-		}
-		else{
-			handlerRTC.RTC_Config.RTC_Hours = (unsigned int) firstParameter;
-			handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) secondParameter;
-			handlerRTC.RTC_Config.RTC_Seconds = (unsigned int) thirdParameter;
-			RTC_Config(&handlerRTC);
-			sprintf(bufferData, "la hora es %u:%u:%u",(unsigned int) firstParameter, secondParameter, thirdParameter + 2000);
-			sprintf(bufferData, "\n\rSe actualizo la hora \n\rhora:%u  minuto:%u  segundo:%u\n\r", firstParameter, secondParameter, thirdParameter);
-			writeMsg(&usart1comm, bufferData);
-		}
-
-
-	} else if (strcmp(cmd, "getTime") == 0) {
-		date 	= read_date();
-		secs 	= date[0];
-		mins 	= date[1];
-		hours 	= date[2];
-		day 	= date[4];
-		month 	= date[5];
-		year 	= date[6];
-		sprintf(bufferData, "\n\rLa hora actual es: \n\rlas %u:%u:%u\n\r", (unsigned int) hours, mins, secs);
+	}
+	else if (strcmp(cmd,"getDate") == 0){
+		date = read_date();
+		day = date[4];
+		month = date[5];
+		year = date[6];
+		sprintf(bufferData, "\n\rLa fecha actual es: \n%u/%u/%u\n", (unsigned int) day,month,year+2000);
 		writeMsg(&usart1comm, bufferData);
-		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 
 	}
+
+	else if (strcmp(cmd,"getADC") == 0){
+		flagADC = 1;
+		for (int c = 0; c < 256; c++) {
+			sprintf(bufferData, "canal 1 = %.4f   | canal 2 = %.4f ; %u\n",adcDataCh1[c],adcDataCh2[c],c);
+			writeMsg(&usart1comm, bufferData);
+		}
+	}
+
 	else if (strcmp(cmd, "getAcc") == 0){
 		flagSample = 1;
 		numberSample = 0;
@@ -518,28 +534,6 @@ void parseCommands (char *ptrBufferReception){
 			writeMsg(&usart1comm, bufferData);
 		}
 
-	}
-	else if (strcmp(cmd, "getAcc")== 0){
-		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
-		flagSample = 1;
-		numberSample = 0;
-		//numberSample++;
-		while (numberSample < 512) {
-			uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
-			uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
-			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
-
-			arrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
-
-		}
-
-		flagSample = 0;
-		numberSample = 0;
-
-		for (int i = 0; i < 512; i++) {
-			sprintf(bufferData, "Z = %.4f   | %u \n", arrayZ[i], i);
-			writeMsg(&usart1comm, bufferData);
-		}
 	}
 	else if (strcmp(cmd,"FFT") == 0){
 		int j = 0;
@@ -574,34 +568,32 @@ void parseCommands (char *ptrBufferReception){
 			float32_t sampleRate = 200.0f; //frecuencia de muestreo
 			float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
 
-			sprintf(bufferData,"dominante :%.2fHz\n",dominantFreq);
+			sprintf(bufferData,"dominante :%.2fHz ; maximo:%f\n",dominantFreq, maximo[0]);
 			writeMsg(&usart1comm, bufferData);
 
 	}
 
-	else if (strcmp(cmd, "freq") == 0) {
-		// Encontrar el índice y el valor máximo en el espectro de frecuencia
-		float32_t maximo[1] = {0};
-		int l = 0;
-		for(l = 1; l< fftSize; l++ ){
-			if (transformedSignal[l]> maximo[0]){
-				maximo[0] = transformedSignal[l];
-			}
-		}
-
-		float32_t sampleRate = 200.0f; //frecuencia de muestreo
-		float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
-
-		sprintf(bufferData,"dominante :%.4f\n",dominantFreq);
-		writeMsg(&usart1comm, bufferData);
-
-	}
+//	else if (strcmp(cmd, "freq") == 0) {
+//		// Encontrar el índice y el valor máximo en el espectro de frecuencia
+//		float32_t maximo[1] = {0};
+//		int l = 0;
+//		for(l = 1; l< fftSize; l++ ){
+//			if (transformedSignal[l]> maximo[0]){
+//				maximo[0] = transformedSignal[l];
+//			}
+//		}
+//
+//		float32_t sampleRate = 200.0f; //frecuencia de muestreo
+//		float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
+//
+//		sprintf(bufferData,"dominante :%.4f\n",dominantFreq);
+//		writeMsg(&usart1comm, bufferData);
+//
+//	}
 
 	else{
 		sprintf(bufferData, "Comando no reconocido\n\r");
 		writeMsg(&usart1comm, bufferData);
-
-
 	}
 
 }
