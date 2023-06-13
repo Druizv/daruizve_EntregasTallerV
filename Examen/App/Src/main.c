@@ -29,6 +29,9 @@
 #include "arm_math.h"
 #include <math.h>
 
+uint32_t maxIndex;
+float32_t maxValue;
+
 #define ACCEL_ADDRESS          	 0x1D
 #define POWER_CTL                45
 
@@ -60,8 +63,8 @@ uint8_t flagSample = 0;
 uint16_t numberSample = 0;
 uint8_t usart1DataReceived = 0;
 
-float arrayZ[500]         ={0};
-uint16_t fftSize 		   = 500;
+float arrayZ[512]         ={0};
+uint16_t fftSize 		   = 512;
 
 //MCO1
 pll_MCO1 handlerMCO1 = {0};
@@ -379,14 +382,14 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "1) help ----	print help menu\n");
 		writeMsg(&usart1comm, "2) SetMCO ---Cambia el reloj del MCO\n");
 		writeMsg(&usart1comm, "3) SetMCOPre --- configura el prescaler del MCO\n");
-		writeMsg(&usart1comm, "4) setTime #Hour #Min #Seg ---- set the time\n");
-		writeMsg(&usart1comm, "5) getTime # ---- read current hour #(us) \n");
-		writeMsg(&usart1comm, "6) setDate #Day #Month Year ---- set the date \n");
-		writeMsg(&usart1comm, "7) getDate ---- read date current date\n");
+		writeMsg(&usart1comm, "4) setTime #HH #MM #SS ----Configura la fecha\n");
+		writeMsg(&usart1comm, "5) getTime  ---- Pesenta la hora actual \n");
+		writeMsg(&usart1comm, "6) setDate #DD #MM YY ---- congigura la fecha \n");
+		writeMsg(&usart1comm, "7) getDate ---- Presenta la fecha actual\n");
 		writeMsg(&usart1comm, "8) setADCss ---- configurar la velocidad de muestreo \n");
 		writeMsg(&usart1comm, "9) getADCData ---- muestra el arreglo de datos \n");
-		writeMsg(&usart1comm, "10) setAcc ---- captura datos del acelerometro \n");
-		writeMsg(&usart1comm, "11) getFFT ---- presenta la frecuencia del acelerometro FFT\n");
+		writeMsg(&usart1comm, "10) getAcc---- captura datos del acelerometro \n");
+		writeMsg(&usart1comm, "11) FFT ---- presenta la frecuencia del acelerometro FFT\n");
 
 	} else if (strcmp(cmd, "setMCO") == 0) {
 		/*
@@ -494,11 +497,11 @@ void parseCommands (char *ptrBufferReception){
 		sprintf(bufferData, "%u:%u:%u", (unsigned int) hours, mins, secs);
 
 	}
-	else if (strcmp(cmd, "setAcc") == 0){
+	else if (strcmp(cmd, "getAcc") == 0){
 		flagSample = 1;
 		numberSample = 0;
 		//numberSample++;
-		while (numberSample < 500) {
+		while (numberSample < 512) {
 			uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
 			uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
 			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
@@ -510,37 +513,38 @@ void parseCommands (char *ptrBufferReception){
 		flagSample = 0;
 		numberSample = 0;
 
-		for (int i = 0; i < 500; i++) {
+		for (int i = 0; i < 512; i++) {
 			sprintf(bufferData, "Z = %.4f   | %u \n", arrayZ[i], i);
 			writeMsg(&usart1comm, bufferData);
 		}
 
 	}
-
-	else if(strcmp(cmd, "setz") == 0){
-		sprintf(bufferData, "Axis Z data (r)\n");
-		writeMsg(&usart1comm, bufferData);
+	else if (strcmp(cmd, "getAcc")== 0){
 		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
-		uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
-		uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
-		int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
-		sprintf(bufferData, "AccelZ = %.2f \n",  (AccelZ/256.f)*9.78);
-		writeMsg(&usart1comm, bufferData);
-		rxData = '\0';
-	}
-	else if (strcmp(cmd, "resetz") == 0){
-		sprintf(bufferData, "\nreset axie(z)\n");
-		writeMsg(&usart1comm, bufferData);
+		flagSample = 1;
+		numberSample = 0;
+		//numberSample++;
+		while (numberSample < 512) {
+			uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
+			uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
+			int16_t AccelZ = AccelZ_high << 8 | AccelZ_low;
 
-		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
-		rxData = '\0';
-	}
+			arrayZ[numberSample] = (AccelZ / 256.f) * 9.78;
 
-	else if (strcmp(cmd,"getFFT") == 0){
-		statusInitFFT = arm_rfft_fast_init_f32(&config_Rfft_fast_f32, fftSize);
+		}
+
+		flagSample = 0;
+		numberSample = 0;
+
+		for (int i = 0; i < 512; i++) {
+			sprintf(bufferData, "Z = %.4f   | %u \n", arrayZ[i], i);
+			writeMsg(&usart1comm, bufferData);
+		}
+	}
+	else if (strcmp(cmd,"FFT") == 0){
 		int j = 0;
 		int k = 0;
-
+		statusInitFFT = arm_rfft_fast_init_f32(&config_Rfft_fast_f32, fftSize);
 		if(statusInitFFT == ARM_MATH_SUCCESS){
 			sprintf(bufferData, "Initialization.... SUCESS!\n");
 			writeMsg(&usart1comm, bufferData);
@@ -552,33 +556,45 @@ void parseCommands (char *ptrBufferReception){
 
 			for( j = 1; j < fftSize; j++){
 				if(j % 2){
-					sprintf(bufferData, "%u ; %#.6f\n", k, 2*arrayZ[j]);
+					sprintf(bufferData, "%u ; %#.4f\n", k, 2*arrayZ[j]);
 					writeMsg(&usart1comm, bufferData);
 					k++;
 				}
 			}
 
-	}
-	else if (strcmp(cmd,"seno") == 0){
+			// Encontrar el índice y el valor máximo en el espectro de frecuencia
+			float32_t maximo[1] = {0};
+			int l = 0;
+			for(l = 1; l< fftSize; l++ ){
+				if (transformedSignal[l]> maximo[0]){
+					maximo[0] = transformedSignal[l];
+				}
+			}
 
-		createSignal();
-		sprintf(bufferData, "Creando la seña.. \n");
-		writeMsg(&usart1comm, bufferData);
-	}
-	else if (strcmp(cmd,"aver")== 0){
+			float32_t sampleRate = 200.0f; //frecuencia de muestreo
+			float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
 
-		stopTime = 0.0;
-		int i	 = 0;
-
-		sprintf(bufferData, "Signal values Time - sine\n");
-		writeMsg(&usart1comm, bufferData);
-
-		while(stopTime < 0.01){
-			stopTime = dt*i;
-			i++;
-			sprintf(bufferData, "%#.5f ; %#.6f\n", stopTime, sineSignal[i]);
+			sprintf(bufferData,"dominante :%.2fHz\n",dominantFreq);
 			writeMsg(&usart1comm, bufferData);
+
+	}
+
+	else if (strcmp(cmd, "freq") == 0) {
+		// Encontrar el índice y el valor máximo en el espectro de frecuencia
+		float32_t maximo[1] = {0};
+		int l = 0;
+		for(l = 1; l< fftSize; l++ ){
+			if (transformedSignal[l]> maximo[0]){
+				maximo[0] = transformedSignal[l];
+			}
 		}
+
+		float32_t sampleRate = 200.0f; //frecuencia de muestreo
+		float32_t dominantFreq = (maximo[0] *sampleRate ) / 512;
+
+		sprintf(bufferData,"dominante :%.4f\n",dominantFreq);
+		writeMsg(&usart1comm, bufferData);
+
 	}
 
 	else{
