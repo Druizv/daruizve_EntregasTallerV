@@ -5,7 +5,6 @@
  *      Author: druiz
  */
 
-
 /* Este archivo es la parte del programa donde escribimos adecuadamente el control,
  * paraque sea lo más genérico posible, de forma que independiente del puerto GPIO y
  * el PIN seleccionados, el programa se ejecute y configure everything correctamente */

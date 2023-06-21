@@ -5,7 +5,8 @@
 #include <string.h>
 #include "RTC.h"
 #include "keypad.h"
-
+#include "SpiDriver.h"
+#include "GPIOxDriver.h"
 
 
 //Para generar el token
@@ -23,6 +24,13 @@ char userToken[8] = {0};
 char tokenArray[8];
 
 //SPI
+GPIO_Handler_t handlerSpiCLK = {0};
+GPIO_Handler_t handlerSpiMISO = {0};
+GPIO_Handler_t handlerSpiMOSI = {0};
+GPIO_Handler_t handlerSpiSS = {0};
+
+SPI_Handler_t handlerSpiMode = {0};
+
 
 //Keypad
 bool    keypadflag   		 = false;
@@ -178,14 +186,93 @@ int main(void){
 		}
 }
 
+
 void init_system(void){
-	handlerRTC.RTC_Config.RTC_Hours = (unsigned int) 5;
-	handlerRTC.RTC_Config.RTC_Minutes = (unsigned int) 40;
-	handlerRTC.RTC_Config.RTC_ValueDay = (unsigned int) 19;
-	handlerRTC.RTC_Config.RTC_Month = (unsigned int) 6;
-	handlerRTC.RTC_Config.RTC_Year = (unsigned int) 23;
-	handlerRTC.RTC_Config.RTC_TimeNotation = (unsigned int) 0;
-	RTC_Config(&handlerRTC);
+
+	//Configuracion del BLinky
+	handlerBlinkyPin.pGPIOx											= GPIOH;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber					= PIN_1;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode					= GPIO_MODE_OUT;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed					= GPIO_OSPEED_FAST;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	GPIO_Config(&handlerBlinkyPin);
+
+	/*================================== SPI ========================================*/
+
+	handlerSpiCLK.pGPIOx											= GPIOA;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinNumber						= PA5;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinOPType						= GPIO_OTYPE_PUSHPULL;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	handlerSpiCLK.GPIO_PinConfig.GPIO_PinAltFunMode					= AF5;
+	GPIO_Config(&handlerSpiCLK);
+
+
+	handlerSpiMISO.pGPIOx											= GPIOA;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinNumber					= PA6;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	handlerSpiMISO.GPIO_PinConfig.GPIO_PinAltFunMode				= AF5;
+	GPIO_Config(&handlerSpiMISO);
+
+	handlerSpiMOSI.pGPIOx											= GPIOA;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinNumber					= PA7;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	handlerSpiMOSI.GPIO_PinConfig.GPIO_PinAltFunMode				= AF5;
+	GPIO_Config(&handlerSpiMOSI);
+
+	handlerSpiSS.pGPIOx											= GPIOB;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinNumber					= PIN_0;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinMode					= GPIO_MODE_OUT;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinSpeed					= GPIO_OSPEED_FAST;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+	handlerSpiSS.GPIO_PinConfig.GPIO_PinAltFunMode				= AF0;
+	GPIO_Config(&handlerSpiSS);
+
+	handlerSpiMode.ptrSPIx											= SPI1;
+	handlerSpiMode.SPI_Config.SPI_mode								= SPI_MODE_3;
+	handlerSpiMode.SPI_Config.SPI_fullDupplexEnable					= SPI_FULL_DUPLEX;
+	handlerSpiMode.SPI_Config.SPI_datasize							= SPI_DATASIZE_8_BIT;
+	handlerSpiMode.SPI_Config.SPI_baudrate                          = SPI_BAUDRATE_FPCLK_4; //se configura despues 1MH y necesito 13
+	handlerSpiMode.SPI_slavePin										= handlerSpiSS;
+	SPI_Config_t(handlerSpiMode);
+
+    /*==================================== TIMER =======================================/*
+
+
+	/*=========================== Matriz númerica ====================================*/
+	/*La matriz numerica consta de 8 pines, 4 para las filas y 4 para las columnas
+	 * se debe configurar estos pines de tal manera que envie señales a las filas
+	 * y lea las columnas y dependiendo de la fila y columna activa genere la señal de interrupcion
+	 */
+
+
+	/*==================================== KEYPAD====================================*/
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

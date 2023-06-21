@@ -92,7 +92,7 @@ void LCD_Init (I2C_Handler_t *ptrHandlerI2C) {
 	LCD_sendCMD (ptrHandlerI2C, 0x0C);
 }
 
-void LCD_sendSTR(I2C_Handler_t *ptrHandlerI2C, char *str) {
+void lcd_send_string(I2C_Handler_t *ptrHandlerI2C, char *str) {
 	while (*str) LCD_sendata (ptrHandlerI2C, *str++);
 }
 void LCD_setCursor(I2C_Handler_t *ptrHandlerI2C, uint8_t x, uint8_t y) {

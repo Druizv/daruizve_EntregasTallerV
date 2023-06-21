@@ -66,7 +66,7 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 	 * el valor cargado en el CCRx será recargado en el registro "shadow" del PWM */
 	switch(ptrPwmHandler->config.channel){
 	case PWM_CHANNEL_1:{
-		// Seleccionamos como salida el canal
+		// Seleccionamos como salida el canal (comparador)
 		ptrPwmHandler -> ptrTIMx -> CCMR1 &= ~TIM_CCMR1_CC1S_0;
 		ptrPwmHandler -> ptrTIMx -> CCMR1 &= ~TIM_CCMR1_CC1S_1;
 

@@ -43,6 +43,7 @@ GPIO_Handler_t handlerBlinkyPin = {0};	//PH1
 uint8_t counter = 0;
 
 
+
 /* Elemento para hacer la comunicacion serial */
 GPIO_Handler_t handlerPinTX = {0};
 GPIO_Handler_t handlerPinRX = {0};
@@ -401,7 +402,7 @@ void parseCommands (char *ptrBufferReception){
 		writeMsg(&usart1comm, "5) getTime  ---- Pesenta la hora actual \n");
 		writeMsg(&usart1comm, "6) setDate #DD #MM YY ---- congigura la fecha \n");
 		writeMsg(&usart1comm, "7) getDate ---- Presenta la fecha actual\n");
-		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo \n");
+		writeMsg(&usart1comm, "8) setADCSS ---- configurar la velocidad de muestreo (No entregado)\n");
 		writeMsg(&usart1comm, "9) getADC ---- muestra el arreglo de datos \n");
 		writeMsg(&usart1comm, "10) getAcc---- captura datos del acelerometro \n");
 		writeMsg(&usart1comm, "11) FFT ---- presenta la frecuencia del acelerometro FFT\n");
@@ -536,6 +537,7 @@ void parseCommands (char *ptrBufferReception){
 		flagSample = 1;
 		numberSample = 0;
 		//numberSample++;
+		i2c_writeSingleRegister(&handlerAccelerometer, POWER_CTL , 0x2D);
 		while (numberSample < 512) {
 			uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
 			uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
