@@ -1,16 +1,71 @@
-#include "RFID.h"
-#include "spi.h"
+//#include "RFID.h"
+//#include "spi.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stm32f4xx.h"
+#include "SpiDriver.h"
+#include "GPIOxDriver.h"
+#include "RFID.h"
 /*
  * STM32 ->RFID
  * SPI  -> SPI
  * PA8  ->RST
  * PB0  ->CS
  * */
+GPIO_Handler_t handlerSpiCLK = {0};
+GPIO_Handler_t handlerSpiMISO = {0};
+GPIO_Handler_t handlerSpiMOSI = {0};
+GPIO_Handler_t handlerSpiSS = {0};
+
+SPI_handler_t handlerSpiMode = {0};
+
+void SPI_pins_init(){
+		handlerSpiCLK.pGPIOx											= GPIOA;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinNumber						= PIN_5;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinOPType						= GPIO_OTYPE_PUSHPULL;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+		handlerSpiCLK.GPIO_PinConfig.GPIO_PinAltFunMode					= AF5;
+		GPIO_Config(&handlerSpiCLK);
 
 
+		handlerSpiMISO.pGPIOx											= GPIOA;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinNumber					= PIN_6;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+		handlerSpiMISO.GPIO_PinConfig.GPIO_PinAltFunMode				= AF5;
+		GPIO_Config(&handlerSpiMISO);
+
+		handlerSpiMOSI.pGPIOx											= GPIOA;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinNumber					= PIN_7;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinMode						= GPIO_MODE_ALTFN;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinSpeed						= GPIO_OSPEED_FAST;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+		handlerSpiMOSI.GPIO_PinConfig.GPIO_PinAltFunMode				= AF5;
+		GPIO_Config(&handlerSpiMOSI);
+
+		handlerSpiSS.pGPIOx											= GPIOB;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinNumber					= PIN_0;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinMode					= GPIO_MODE_OUT;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinOPType					= GPIO_OTYPE_PUSHPULL;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinSpeed					= GPIO_OSPEED_FAST;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinPuPdControl				= GPIO_PUPDR_NOTHING;
+		handlerSpiSS.GPIO_PinConfig.GPIO_PinAltFunMode				= AF0;
+		GPIO_Config(&handlerSpiSS);
+
+		handlerSpiMode.ptrSPIx											= SPI1;
+		handlerSpiMode.SPI_Config.SPI_mode								= SPI_MODE_3;
+		handlerSpiMode.SPI_Config.SPI_fullDupplexEnable					= SPI_FULL_DUPLEX;
+		handlerSpiMode.SPI_Config.SPI_datasize							= SPI_DATASIZE_8_BIT;
+		handlerSpiMode.SPI_Config.SPI_baudrate                          = SPI_BAUDRATE_FPCLK_4; //se configura despues 1MH y necesito 13
+		handlerSpiMode.SPI_slavePin										= handlerSpiSS;
+		spi_config(handlerSpiMode);
+
+}
 /**
  * @brief initialize function
  */
@@ -52,9 +107,9 @@ uint8_t rc522_regRead8(uint8_t reg)
 {
   spi_cs_rfid_write(0); //Devuelve false a esa funcion singifica que esta listo para recibir datos
   reg = ((reg << 1) & 0x7E) | 0x80; //prepara Reg para que el bit mas significativo sea 1 y el menos no tenga cambios
-  spi1_transmit(&reg, 1); //Envia el registro a traves del SPI
+  spi_transmit(handlerSpiMode,&reg,1); //Envia el registro a traves del SPI
   uint8_t dataRd=0;
-  spi1_receive(&dataRd, 1); //Recibe los datos de la tarjeta
+  spi_receive(handlerSpiMode,&dataRd, 1); //Recibe los datos de la tarjeta
   spi_cs_rfid_write(1);    //Activa el SS y en alto (1) para que no responda a transmisiones
   return dataRd;		   //Devuelve los datos leidos
 }
@@ -67,7 +122,7 @@ void rc522_regWrite8(uint8_t reg, uint8_t data8)
   spi_cs_rfid_write(0); //Aciva el periferico para la comunicacion
   uint8_t txData[2] = {0x7E&(reg << 1), data8}; //De nuevo se desplaza a la izquierda 1 vez
   //el bit mas significativo sea 1 con tamaño 2
-  spi1_transmit(txData, 2);//Transmite los datos del arreglo a traves de SPI
+  spi_transmit(handlerSpiMode,txData, 2);//Transmite los datos del arreglo a traves de SPI
   spi_cs_rfid_write(1); //Apaga la comunicacion SS
 }
 
@@ -114,7 +169,7 @@ void rc522_antennaON(void)
 bool rc522_checkCard(uint8_t *id)
 {
   bool status=false;
-  //Find cards, return card type
+  //Busca tarjetas, y retorna el tipo de tarjeta
     status = rc522_request(PICC_REQIDL, id);
     if (status == true) {
       //Card detected
@@ -339,8 +394,9 @@ void rc522_init(void)
 	 * PA8  ->RST
 	 * PB0  ->CS
 	 * */
-  SPI1_Pins_Init();
-  SPI1_Init();
+  SPI_pins_init();
+
+
   GPIOA->MODER|=GPIO_MODER_MODE8_0;
   GPIOA->MODER&=~GPIO_MODER_MODE8_1;
 
@@ -348,20 +404,20 @@ void rc522_init(void)
 
   GPIOB->MODER|=GPIO_MODER_MODE0_0;
   GPIOB->MODER&=~GPIO_MODER_MODE0_1;
-  GPIOA->BSRR=GPIO_BSRR_BR8;
-  for(volatile int i=0;i<100000;i++);
-  GPIOA->BSRR=GPIO_BSRR_BS8;
-  for(volatile int i=0;i<100000;i++);
-  rc522_reset();
+  GPIOA->BSRR=GPIO_BSRR_BR8; //Apaga el pin
+  for(volatile int i=0;i<100000;i++); //Genera tiempo
+  GPIOA->BSRR=GPIO_BSRR_BS8; //enciende el pin
+  for(volatile int i=0;i<100000;i++); //mas tiempo
+  rc522_reset(); //Reinicia el dispositivo
 
-  rc522_regWrite8(MFRC522_REG_T_MODE, 0x80);
-  rc522_regWrite8(MFRC522_REG_T_PRESCALER, 0xA9);
-  rc522_regWrite8(MFRC522_REG_T_RELOAD_L, 0xE8);
-  rc522_regWrite8(MFRC522_REG_T_RELOAD_H, 0x03);
+  rc522_regWrite8(MFRC522_REG_T_MODE, 0x80);  //Se activa la señal del reloj
+  rc522_regWrite8(MFRC522_REG_T_PRESCALER, 0xA9); //Se define el prescaler
+  rc522_regWrite8(MFRC522_REG_T_RELOAD_L, 0xE8); //se define el tiempo abajo del reloj
+  rc522_regWrite8(MFRC522_REG_T_RELOAD_H, 0x03); //se define el tiempo arriba del reloj
 
 
-  rc522_regWrite8(MFRC522_REG_TX_AUTO, 0x40);
-  rc522_regWrite8(MFRC522_REG_MODE, 0x3D);
+  rc522_regWrite8(MFRC522_REG_TX_AUTO, 0x40); //transmision automatica
+  rc522_regWrite8(MFRC522_REG_MODE, 0x3D); //modo de operacion
 
   rc522_antennaON();   //Open the antenna
 }

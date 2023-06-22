@@ -45,6 +45,7 @@ typedef struct
 
 
 /*Prototipos de las funciones*/\
+void SPI_pins_init();
 void spi_config(SPI_handler_t ptrHandlerSPI);
 void spi_transmit(SPI_handler_t ptrHandlerSPI, uint8_t *ptrData, uint32_t dataSize);
 void spi_receive(SPI_handler_t ptrHandlerSPI, uint8_t *ptrData, uint32_t dataSize);

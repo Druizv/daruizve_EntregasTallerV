@@ -1,8 +1,10 @@
 #include "LiquidCrystal_PCF8574.h"
 #include "stdint.h"
 #include "i2c.h"
+#include "I2CDriver.h"
 #include "stm32f4xx.h"
 #include "delay.h"
+#include "GPIOxDriver.h"
 #define SLAVE_ADDRESS_LCD (0x25) // change this according to ur setup
 
 

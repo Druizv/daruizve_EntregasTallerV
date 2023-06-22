@@ -161,7 +161,7 @@ void spi_transmit(SPI_handler_t ptrHandlerSPI, uint8_t *data,uint32_t size)
 //
 //}
 
-void spi_received(SPI_handler_t ptrHandlerSPI, uint8_t * ptrData, uint32_t dataSize){
+void spi_receive(SPI_handler_t ptrHandlerSPI, uint8_t * ptrData, uint32_t dataSize){
 	while(dataSize){
 		//esperamos a que el buffer este vacio de nuevo
 		while(!(ptrHandlerSPI.ptrSPIx->SR & SPI_SR_TXE)){
@@ -218,7 +218,5 @@ void spi_unselectSlave(SPI_handler_t* ptrHandlerSPI){
 	GPIO_WritePin(&ptrHandlerSPI->SPI_slavePin, SET);
 	//GPIOA->BSRR |= (SET << 9);
 }
-
-
 
 

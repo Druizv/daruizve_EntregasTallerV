@@ -1,5 +1,8 @@
 #include <stdint.h>
 #include "LCDDriver.h"
+#include "I2CDriver.h"
+
+
 
 void LCD_sendCMD (I2C_Handler_t *ptrHandlerI2C, char cmd){
 	char _U;
@@ -32,7 +35,7 @@ void LCD_writeData(I2C_Handler_t *ptrHandlerI2C, uint8_t dataToWrite){
 }
 
 
-void LCD_sendata (I2C_Handler_t *ptrHandlerI2C, char data){
+void LCD_send_data (I2C_Handler_t *ptrHandlerI2C, char data){
 	char _U;
 	char _L;
 	uint8_t _T[4];
@@ -48,6 +51,7 @@ void LCD_sendata (I2C_Handler_t *ptrHandlerI2C, char data){
 	LCD_writeData(ptrHandlerI2C, _T[3]);
 }
 
+
 void LCD_Clear (I2C_Handler_t *ptrHandlerI2C) {
 //	LCD_sendata (ptrHandlerI2C, 0x00);
 	LCD_sendCMD(ptrHandlerI2C, 0x01);
@@ -55,6 +59,7 @@ void LCD_Clear (I2C_Handler_t *ptrHandlerI2C) {
 }
 
 void LCD_Init (I2C_Handler_t *ptrHandlerI2C) {
+
 
 	// Delay de inizializacion
 	delay_50();
@@ -92,8 +97,8 @@ void LCD_Init (I2C_Handler_t *ptrHandlerI2C) {
 	LCD_sendCMD (ptrHandlerI2C, 0x0C);
 }
 
-void lcd_send_string(I2C_Handler_t *ptrHandlerI2C, char *str) {
-	while (*str) LCD_sendata (ptrHandlerI2C, *str++);
+void LCD_sendSTR(I2C_Handler_t *ptrHandlerI2C, char *str) {
+	while (*str) LCD_send_data (ptrHandlerI2C, *str++);
 }
 void LCD_setCursor(I2C_Handler_t *ptrHandlerI2C, uint8_t x, uint8_t y) {
 	uint8_t cursor;
@@ -226,8 +231,4 @@ void delay_X (uint16_t num){
 	}
 }
 
-void LCD_ClearScreen(I2C_Handler_t *ptrHandlerI2C, uint8_t cursor1){
-	char DataClean[64] = "                    ";
-	LCD_setCursor(ptrHandlerI2C, 0, cursor1);
-	LCD_sendSTR(ptrHandlerI2C, DataClean);
-}
+

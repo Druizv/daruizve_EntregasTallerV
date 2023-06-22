@@ -16,6 +16,7 @@
 
 #define I2C_MODE_SM          0
 #define I2C_MODE_FM          1
+#define personal			 2
 
 #define I2C_MODE_SM_SPEED_100KHz     80
 #define I2C_MODE_FM_SPEED_400KHz     14

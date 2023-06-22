@@ -12,7 +12,7 @@
  * y con la resistencia en modo pull-up.
  */
 void i2c_config(I2C_Handler_t *ptrHandlerI2C){
-
+	RCC->AHB1ENR|=RCC_AHB1ENR_GPIOBEN;
 	/*1. Activamos la señal de reloj para el modulo I2C seleccionado*/
 	if(ptrHandlerI2C->ptrI2Cx == I2C1){
 		RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
@@ -56,6 +56,12 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_SM;
 
 	}// Cierre Standar Mode
+
+	else if(ptrHandlerI2C->modeI2C==personal){
+		I2C1->CCR=80; //standard 100KHz
+		I2C1->TRISE=17;
+		I2C1->CR1|=0x1;
+	}
 	else{
 		// Estamos en modo "Fast" (FM mode)
 		// Seleccionamos el modo Fast

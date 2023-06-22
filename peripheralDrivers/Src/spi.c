@@ -19,7 +19,7 @@ void SPI1_Pins_Init()
 }
 
 
-
+//Este driver es hecho especificamente para
 void SPI1_Init()
 {
 	/*Enable clock access to SPI1 module*/
