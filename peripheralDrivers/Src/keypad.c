@@ -13,6 +13,8 @@
 
 #include "GPIOxDriver.h"
 
+#include "ExtiDriver.h"
+
 //Defino los pines a usar dentro del driver
 
 GPIO_Handler_t handlerPC0 = {0};
@@ -23,6 +25,11 @@ GPIO_Handler_t handlerPC4 = {0};
 GPIO_Handler_t handlerPC5 = {0};
 GPIO_Handler_t handlerPC6 = {0};
 GPIO_Handler_t handlerPC7 = {0};
+
+EXTI_Config_t ExtiPC0 = {0};
+EXTI_Config_t ExtiPC1 = {0};
+EXTI_Config_t ExtiPC2 = {0};
+EXTI_Config_t ExtiPC3 = {0};
 
 static char decode_keypad(uint8_t col, uint8_t row);
 
@@ -96,7 +103,6 @@ void keypad_init(void)
 	handlerPC7.GPIO_PinConfig.GPIO_PinMode	= GPIO_MODE_OUT;
 
 	/*Set PC4 to PC7 as high*/
-	//GPIOC->BSRR = GPIO_BSRR_BS4|GPIO_BSRR_BS5|GPIO_BSRR_BS6|GPIO_BSRR_BS7;
 	GPIO_WritePin(&handlerPC4, RESET);
 	GPIO_WritePin(&handlerPC5, RESET);
 	GPIO_WritePin(&handlerPC6, RESET);
@@ -111,6 +117,24 @@ void keypad_init(void)
 	GPIO_Config(&handlerPC5);
 	GPIO_Config(&handlerPC6);
 	GPIO_Config(&handlerPC7);
+
+	/*Configure EXTI keys*/
+	ExtiPC0.edgeType                                       = EXTERNAL_INTERRUPT_RISING_EDGE;
+	ExtiPC0.pGPIOHandler                                   = &handlerPC0;
+	extInt_Config(&ExtiPC0);
+
+	ExtiPC1.edgeType                                       = EXTERNAL_INTERRUPT_RISING_EDGE;
+	ExtiPC1.pGPIOHandler                                   = &handlerPC1;
+	extInt_Config(&ExtiPC1);
+
+	ExtiPC2.edgeType                                       = EXTERNAL_INTERRUPT_RISING_EDGE;
+	ExtiPC2.pGPIOHandler                                   = &handlerPC2;
+	extInt_Config(&ExtiPC2);
+
+	ExtiPC3.edgeType                                       = EXTERNAL_INTERRUPT_RISING_EDGE;
+	ExtiPC3.pGPIOHandler                                   = &handlerPC3;
+	extInt_Config(&ExtiPC3);
+
 }
 
 
