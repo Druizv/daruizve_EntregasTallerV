@@ -88,7 +88,7 @@ uint8_t RTC_BcdToByte(uint16_t BCD_Value){
     return Decimal_Value;
 }
 
-uint16_t calendario[7] = {0};
+uint16_t calendar[7] = {0};
 
 void *read_date(void){
 
@@ -102,6 +102,7 @@ void *read_date(void){
 	 uint8_t RTC_year = 0;
 	 uint8_t RTC_Month = 0;
 	 uint8_t RTC_Day = 0;
+	 uint8_t RTC_Format = 0;
 
 	 uint32_t RTC_Time = 0;
 	 RTC_Time = RTC->TR;
@@ -119,13 +120,15 @@ void *read_date(void){
 	 RTC_Month  = RTC_BcdToByte(((RTC_Date & 0x1F00)   >> 8));
 	 RTC_Day    = RTC_BcdToByte((RTC_Date  & 0x3F));
 
+	 RTC_Format = RTC_BcdToByte(((RTC_Time & 0x40000) >> 17)); // 0100 0000 0000 0000 0000 donde se ve el formato
 
-	calendario[0] = RTC_Seconds;
-	calendario[1] = RTC_Minutes;
-	calendario[2] = RTC_Hours;
-	calendario[4] = RTC_Day;
-	calendario[5] = RTC_Month;
-	calendario[6] = RTC_year;
+	calendar[0] = RTC_Seconds;
+	calendar[1] = RTC_Minutes;
+	calendar[2] = RTC_Hours;
+	calendar[3] = RTC_Format;
+	calendar[4] = RTC_Day;
+	calendar[5] = RTC_Month;
+	calendar[6] = RTC_year;
 //    }
-	return calendario;
+	return calendar;
 }

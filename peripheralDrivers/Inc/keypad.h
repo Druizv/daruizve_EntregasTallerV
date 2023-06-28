@@ -1,9 +1,3 @@
-/*
- * keypad.h
- *
- *  Created on: May 14, 2023
- *      Author: hussamaldean
- */
 
 #ifndef KEYPAD_H_
 #define KEYPAD_H_

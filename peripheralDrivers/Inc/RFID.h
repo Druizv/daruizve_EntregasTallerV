@@ -1,11 +1,3 @@
-/*
- * RFID.h
- *
- *  Created on: Jan 16, 2022
- *      Author: hussam
- */
-
-
 
 #ifndef RFID_H_
 #define RFID_H_

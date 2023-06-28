@@ -16,6 +16,9 @@ void lcd_write_i2c(char saddr, uint8_t *buffer, uint8_t length) {
 		;
 	}					//wait until start is generated
 	volatile int Temp = 0;
+	if(Temp == 0){
+		__NOP();
+	}
 	I2C1->DR = saddr << 1;                 	 			// Send slave address
 	while (!(I2C1->SR1 & I2C_SR1_ADDR)) {
 		;

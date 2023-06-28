@@ -1,9 +1,3 @@
-/*
- * keypad.c
- *
- *  Created on: May 14, 2023
- *      Author: hussamaldean
- */
 
 #include "stm32f4xx.h"
 
